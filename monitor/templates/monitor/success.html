@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Success{% endblock %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="alert alert-success">
+        <h2>Hello "Name"</h2>
+        <h3>Successfully Signed In for "Class"</h3>
+    </div>
+</div>
+
+<script>
+    let timeLeft = 3;
+    
+    const countdown = setInterval(function() {
+        timeLeft--;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            window.location.href = "{% url 'monitor:index' %}";
+        }
+    }, 1000);
+</script>
+{% endblock %}
