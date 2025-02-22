@@ -7,7 +7,7 @@ def index(request):
     return render(request, 'monitor/index.html')
 
 def success(request):
-     return render(request, 'monitor/success.html')
+    return render(request, 'monitor/success.html')
 
 def class_select(request):
     if request.method == 'POST':
