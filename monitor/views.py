@@ -4,6 +4,7 @@ from django.http import HttpResponse
 import requests
 from django.http import JsonResponse
 from django.conf import settings
+from monitor.models import Class
 import json
 
 
@@ -148,6 +149,8 @@ def class_select(request):
         'yours': llcs[:5],  # First 5 unique courses
         'subjects': subjects
     }
+
+    Class.objects.create(class_name="TEST")
 
     return render(request, 'monitor/class_select.html', context)
 
