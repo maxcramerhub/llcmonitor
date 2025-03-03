@@ -13,52 +13,23 @@ def index(request):
 
 def success(request):
      return render(request, 'monitor/success.html')
-    
-# def setup(request):
-#      return render(request, 'monitor/setup.html')
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 
+def class_check(request):
+    #we want to grab the classes associated with the student
+    #then we show them as options
+    #then we can submit a post with the selected class
+    #create the checkin object with class, student, checkin time
 
-def class_select(request):
-    # Subjects of interest (matching the template)
-    subjects = ["Mathematics", "Physics", "Computer Science", "Engineering"]
-    
-    # Unique courses tracking
-    unique_courses = {}
-
-    # Assuming 'courses' is a queryset or list of course dictionaries
-    for course in courses:
-        subject = course.get('Subject', 'Other')
-        course_number = course.get("Course_Number", 0)
-        
-        # Create a unique identifier for the course
-        course_key = f"{subject}_{course_number}"
-        
-        # Only add the course if it hasn't been seen before
-        if subject in subjects and course_key not in unique_courses:
-            unique_courses[course_key] = course
-
-    # Convert unique courses to a list
-    filtered_courses = list(unique_courses.values())
-
-    # Handle POST request for course selection
-    if request.method == 'POST':
-        selected_course = request.POST.get('selected_course')
-        if selected_course:
-            # Logic for handling selected course
-            # For example, saving to student's courses or starting a session
-            return redirect('monitor:success')
-
-    # Prepare context for rendering
     context = {
-        'student_name': request.user.get_full_name() or request.user.username,
-        'subjects': subjects,
-        'courses': filtered_courses,
-    }
+        'student_name': 'Max'
 
-    return render(request, 'monitor/class_select.html', context)
+    }
+    return render(request, 'monitor/class_check.html', context)
+
+#use checkboxes to make super simple
 
 def class_select(request):
     try:
@@ -144,7 +115,7 @@ def class_select(request):
     llcs = list(unique_courses.values())
 
     context = {
-        'student_name': 'test',
+        'student_name': 'Max',
         'courses': llcs,  # Full list of unique courses
         'yours': llcs[:5],  # First 5 unique courses
         'subjects': subjects
