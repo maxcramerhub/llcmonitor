@@ -50,6 +50,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'course_cache_table',
+    }
+}
+
 ROOT_URLCONF = "llcsite.urls"
 
 TEMPLATES = [
@@ -77,7 +84,7 @@ WSGI_APPLICATION = "llcsite.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "mydatabase.sqlite",
+        "NAME": BASE_DIR / "mydatabase.sqlite3",
     }
 }
 
