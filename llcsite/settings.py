@@ -50,6 +50,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'course_cache_table',
+    }
+}
+
 ROOT_URLCONF = "llcsite.urls"
 
 TEMPLATES = [

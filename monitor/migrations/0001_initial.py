@@ -8,134 +8,231 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Checkin',
+            name="Class",
             fields=[
-                ('checkin_id', models.AutoField(primary_key=True, serialize=False)),
-                ('checkin_time', models.DateTimeField(blank=True, null=True)),
-                ('checkout_time', models.DateTimeField(blank=True, null=True)),
+                ("class_id", models.AutoField(primary_key=True, serialize=False)),
+                ("class_name", models.CharField(max_length=200)),
+                ("instructor", models.CharField(max_length=200)),
+                ("semester", models.CharField(max_length=100)),
             ],
             options={
-                'db_table': 'CheckIn',
-                'managed': False,
+                "db_table": "Class",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Class',
+            name="Faculty",
             fields=[
-                ('class_id', models.AutoField(db_column='class_ID', primary_key=True, serialize=False)),
-                ('class_name', models.TextField()),
-                ('instructor', models.TextField()),
-                ('semseter', models.TextField()),
+                ("faculty_id", models.AutoField(primary_key=True, serialize=False)),
+                ("fname", models.CharField(max_length=100)),
+                ("lname", models.CharField(max_length=100)),
+                ("password", models.CharField(max_length=255)),
+                ("username", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'db_table': 'Class',
-                'managed': False,
+                "db_table": "Faculty",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Faculty',
+            name="Reviews",
             fields=[
-                ('faculty_id', models.AutoField(primary_key=True, serialize=False)),
-                ('fname', models.TextField()),
-                ('lname', models.TextField()),
-                ('password', models.TextField()),
-                ('username', models.TextField(unique=True)),
+                ("review_id", models.AutoField(primary_key=True, serialize=False)),
+                ("written_review", models.TextField()),
             ],
             options={
-                'db_table': 'Faculty',
-                'managed': False,
+                "db_table": "Reviews",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Reviews',
+            name="Schedule",
             fields=[
-                ('review_id', models.AutoField(primary_key=True, serialize=False)),
-                ('written_review', models.TextField()),
+                ("schedule_id", models.AutoField(primary_key=True, serialize=False)),
+                ("day", models.CharField(max_length=50)),
+                ("week", models.CharField(max_length=50)),
+                ("month", models.CharField(max_length=50)),
+                ("year", models.IntegerField()),
+                ("semester", models.CharField(max_length=100)),
             ],
             options={
-                'db_table': 'Reviews',
-                'managed': False,
+                "db_table": "Schedule",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Schedule',
+            name="Students",
             fields=[
-                ('schedule_id', models.AutoField(primary_key=True, serialize=False)),
-                ('day', models.TextField()),
-                ('week', models.TextField()),
-                ('month', models.TextField()),
-                ('year', models.IntegerField()),
-                ('semester', models.TextField()),
+                ("student_id", models.AutoField(primary_key=True, serialize=False)),
+                ("fname", models.CharField(max_length=100)),
+                ("lname", models.CharField(max_length=100)),
+                ("username", models.CharField(max_length=100, unique=True)),
+                ("password", models.CharField(max_length=255)),
+                ("western_id", models.IntegerField(unique=True)),
             ],
             options={
-                'db_table': 'Schedule',
-                'managed': False,
+                "db_table": "Students",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Students',
+            name="Tutor",
             fields=[
-                ('student_id', models.AutoField(primary_key=True, serialize=False)),
-                ('fname', models.TextField()),
-                ('lname', models.TextField()),
-                ('username', models.TextField(unique=True)),
-                ('password', models.TextField()),
-                ('western_id', models.IntegerField(unique=True)),
+                ("tutor_id", models.AutoField(primary_key=True, serialize=False)),
+                ("fname", models.CharField(max_length=100)),
+                ("lname", models.CharField(max_length=100)),
+                ("western_id", models.CharField(blank=True, max_length=50, null=True)),
             ],
             options={
-                'db_table': 'Students',
-                'managed': False,
+                "db_table": "Tutor",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='Tutor',
+            name="TutorSchedule",
             fields=[
-                ('tutor_id', models.AutoField(db_column='tutor_ID', primary_key=True, serialize=False)),
-                ('fname', models.TextField(unique=True)),
-                ('lname', models.TextField(unique=True)),
-                ('western_id', models.TextField(blank=True, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "schedule",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.schedule",
+                    ),
+                ),
+                (
+                    "tutor",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, to="monitor.tutor"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Tutor',
-                'managed': False,
+                "db_table": "Tutor_Schedule",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='StudentCheckin',
+            name="TutorReviews",
             fields=[
-                ('student', models.OneToOneField(on_delete=django.db.models.deletion.DO_NOTHING, primary_key=True, serialize=False, to='monitor.students')),
-                ('checkin_time', models.DateTimeField(blank=True, null=True)),
-                ('checkout_time', models.DateTimeField(blank=True, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date_of_review", models.DateTimeField(blank=True, null=True)),
+                (
+                    "review",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.reviews",
+                    ),
+                ),
+                (
+                    "tutor",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, to="monitor.tutor"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Student_CheckIN',
-                'managed': False,
+                "db_table": "Tutor_Reviews",
+                "managed": True,
             },
         ),
         migrations.CreateModel(
-            name='TutorReviews',
+            name="StudentCheckin",
             fields=[
-                ('tutor', models.OneToOneField(on_delete=django.db.models.deletion.DO_NOTHING, primary_key=True, serialize=False, to='monitor.tutor')),
-                ('date_of_reveiw', models.DateTimeField(blank=True, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("checkin_time", models.DateTimeField(blank=True, null=True)),
+                ("checkout_time", models.DateTimeField(blank=True, null=True)),
+                (
+                    "class_field",
+                    models.ForeignKey(
+                        db_column="class_id",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.class",
+                    ),
+                ),
+                (
+                    "student",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.students",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Tutor_Reviews',
-                'managed': False,
+                "db_table": "Student_CheckIN",
+                "managed": True,
             },
         ),
+        migrations.AddField(
+            model_name="schedule",
+            name="tutor",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="schedules",
+                to="monitor.tutor",
+            ),
+        ),
+        migrations.AddField(
+            model_name="reviews",
+            name="tutor",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="reviews",
+                to="monitor.tutor",
+            ),
+        ),
         migrations.CreateModel(
-            name='TutorSchedule',
+            name="Checkin",
             fields=[
-                ('tutor', models.OneToOneField(on_delete=django.db.models.deletion.DO_NOTHING, primary_key=True, serialize=False, to='monitor.tutor')),
+                ("checkin_id", models.AutoField(primary_key=True, serialize=False)),
+                ("checkin_time", models.DateTimeField(blank=True, null=True)),
+                ("checkout_time", models.DateTimeField(blank=True, null=True)),
+                (
+                    "class_field",
+                    models.ForeignKey(
+                        db_column="class_id",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.class",
+                    ),
+                ),
+                (
+                    "student",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="monitor.students",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Tutor_Schedule',
-                'managed': False,
+                "db_table": "CheckIn",
+                "managed": True,
             },
         ),
     ]
