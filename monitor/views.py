@@ -47,7 +47,7 @@ def index(request):
 #Success Sign In
 
 def success(request):
-     return render(request, 'monitor/success.html')
+    return render(request, 'monitor/success.html')
 
 #Pick Class you are there for
 
