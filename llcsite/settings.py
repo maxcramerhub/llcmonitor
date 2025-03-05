@@ -37,8 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'monitor',
-    "bootstrap5"
+    'monitor'
 ]
 
 MIDDLEWARE = [
@@ -78,7 +77,7 @@ WSGI_APPLICATION = "llcsite.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "mydatabase.sqlite",
+        "NAME": BASE_DIR / "mydatabase.sqlite3",
     }
 }
 
