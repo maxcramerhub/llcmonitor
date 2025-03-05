@@ -6,17 +6,15 @@ from monitor.models import Students
 def index(request):
     if request.method == 'POST':
         login = request.POST.get('login')
-
+        exists = False
         if all(x.isnumeric() for x in login):
             student = Students.objects.filter(western_id = int(login)).first()
             print(student)
             #Checks to see if student is in db, redirects to class select if in db, index otherwise
             if student is not None:
-                print(student.western_id)
-                return render(request, 'monitor/class_select.html')
+                exists = True
             else:
-                #TODO: Change to setup once created
-                return render(request, 'monitor/index.html')
+                exists = False
 
         elif all(x.isalpha() or x.isspace() for x in login):
             loginArr = login.split()
@@ -25,11 +23,16 @@ def index(request):
             print(student)
             #Checks to see if student is in db, redirects to class select if in db, index otherwise
             if student is not None:
-                return render(request, 'monitor/class_select.html')
+                exists = True
             else:
-                #TODO: Change to setup once created
-                return render(request, 'monitor/index.html')
+                exists = False
         else:
+            return render(request, 'monitor/index.html')
+        
+        if exists:
+            return render(request, 'monitor/class_select.html')
+        else:
+            #TODO: Change redirect to setup
             return render(request, 'monitor/index.html')
     else:
         return render(request, 'monitor/index.html')
