@@ -52,14 +52,14 @@
                             id="{{ course.Course_Number }}" 
                             value="{{ course.Course_Number }}"
                             autocomplete="off">
-                      <label class="btn btn-outline-danger w-100 p-4 text-start" for="{{ course.Course_Number }}">
+                      <label class="btn btn-outline-danger w-100 p-4 text-start shadow-sm" for="{{ course.Course_Number }}">
                         {{ course.Title }} ({{ course.Course_Number }})
                       </label>
                     </div>
                     {% endif %}
                   {% endfor %}
                 </div>
-                <button type="submit" class="btn btn-primary mt-3 p-3 h3">
+                <button type="submit" class="btn btn-primary mt-3 p-3 h3 shadow">
                   <i class="fa-solid fa-circle-check"></i> Finish Setup
                 </button>
               </form>

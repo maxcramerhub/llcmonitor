@@ -40,10 +40,10 @@
             {% if signed_in == False %}
             <button type="submit" name="action" value="checkin" class="btn btn-primary me-2 mt-3 p-3 h3"><i class="fa-solid fa-circle-check"></i> Check In</button>
             {% else %}
-            <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
-            <button type="submit" name="action" value="swap" class="btn btn-warning me-2 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
+            <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 mt-3 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
+            <button type="submit" name="action" value="swap" class="btn btn-warning me-2 mt-3 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
             {% endif %}
-            <button type="submit" name="action" value="addclass" class="btn btn-success me-2 p-3 h3"><i class="fa-solid fa-graduation-cap"></i> New Class</button>
+            <button type="submit" name="action" value="addclass" class="btn btn-success me-2 mt-3 p-3 h3"><i class="fa-solid fa-graduation-cap"></i> New Class</button>
         </form>
 
 {% endblock %}
