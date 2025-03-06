@@ -12,7 +12,9 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
 
+#------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
+#------------------------------------------------------------------------
 
 def index(request):
     if request.method == 'POST':
@@ -21,9 +23,15 @@ def index(request):
         if all(x.isnumeric() for x in login):
 
             student = Students.objects.filter(western_id = int(login)).first()
+            class_exist = student.classes.count()
             #If we found a student
-            if student:
+            if student and class_exist > 0:
                 return redirect('class-check/')
+            elif student and class_exist == 0:
+                student = Students.objects.get(western_id = login)
+                request.session['western_id'] = student.western_id
+                request.session['student_id'] = student.student_id
+                return redirect('class-select/')
             else:
                 #TODO: Change to setup once created
                 student = Students.objects.create(western_id = login)
@@ -47,29 +55,35 @@ def index(request):
     else:
         return render(request, 'monitor/index.html')
 
-#Success Sign In
+#------------------------------------------------------------------------
+#Success Redirect
+#------------------------------------------------------------------------
 
 def success(request):
     return render(request, 'monitor/success.html')
 
-#Pick Class you are there for
+#------------------------------------------------------------------------
+#Select what class you are here for
+#------------------------------------------------------------------------
 
 def class_check(request):
     western_id = request.session.get('western_id')
     student_id = request.session.get('student_id')
 
     student = Students.objects.get(western_id=western_id)
+
+    #we want to grab the checkin object and see if it exists...
     signed_in = Checkin.objects.filter(
             student=student, 
             checkout_time__isnull=True
         ).exists()
 
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
+    if signed_in:
+        #if the checkin object exists, for what class?
+        check_in = Checkin.objects.get(
+            student=student, 
+            checkout_time__isnull=True
+        )
 
     if request.method == 'POST':
         course = request.POST.get('selected_course')
@@ -133,8 +147,9 @@ def class_check(request):
 
     
 
-#Class Setup Page
-
+#------------------------------------------------------------------------
+#Initial Setup Class Page
+#------------------------------------------------------------------------
 def class_select(request):
     #grab stored login
     student_id = request.session.get('western_id')
