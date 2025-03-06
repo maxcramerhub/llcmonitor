@@ -12,64 +12,91 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
 
+#------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
+#------------------------------------------------------------------------
 
 def index(request):
     if request.method == 'POST':
         login = request.POST.get('login')
 
+        #************************
+        # login is numeric
+        #************************
         if all(x.isnumeric() for x in login):
 
             student = Students.objects.filter(western_id = int(login)).first()
+            class_exist = student.classes.count() if student else 0
             #If we found a student
-            if student:
+            if student and class_exist > 0:
                 return redirect('class-check/')
+            elif student and class_exist == 0:
+                student = Students.objects.get(western_id = login)
+                request.session['student_id'] = student.student_id
+                return redirect('class-select/')
             else:
                 #TODO: Change to setup once created
                 student = Students.objects.create(western_id = login)
-                request.session['western_id'] = student.western_id
                 request.session['student_id'] = student.student_id
                 return redirect('class-select/')
 
+        #************************
+        # login is a name
+        #************************
         elif all(x.isalpha() or x.isspace() for x in login):
             loginArr = login.split()
             print(loginArr)
             student = Students.objects.filter(fname = loginArr[0], lname = loginArr[1]).first()
             print(student)
-            #Checks to see if student is in db, redirects to class select if in db, index otherwise
-            if student is not None:
-                return render(request, 'monitor/class_check.html')
+            
+            class_exist = student.classes.count() if student else 0
+            #If we found a student
+            if student and class_exist > 0:
+                return redirect('class-check/')
+            elif student and class_exist == 0:
+                student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=0)
+                request.session['student_id'] = student.student_id
+                return redirect('class-select/')
             else:
                 #TODO: Change to setup once created
-                return render(request, 'monitor/class_select.html')
+                student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=0)
+                request.session['student_id'] = student.student_id
+                return redirect('class-select/')
+
+
         else:
             return render(request, 'monitor/index.html')
     else:
         return render(request, 'monitor/index.html')
 
-#Success Sign In
+#------------------------------------------------------------------------
+#Success Redirect
+#------------------------------------------------------------------------
 
 def success(request):
     return render(request, 'monitor/success.html')
 
-#Pick Class you are there for
+#------------------------------------------------------------------------
+#Select what class you are here for
+#------------------------------------------------------------------------
 
 def class_check(request):
-    western_id = request.session.get('western_id')
     student_id = request.session.get('student_id')
 
-    student = Students.objects.get(western_id=western_id)
+    student = Students.objects.get(student_id=student_id)
+
+    #we want to grab the checkin object and see if it exists...
     signed_in = Checkin.objects.filter(
             student=student, 
             checkout_time__isnull=True
         ).exists()
 
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
-    print(signed_in)
+    if signed_in:
+        #if the checkin object exists, for what class?
+        check_in = Checkin.objects.filter(
+            student=student, 
+            checkout_time__isnull=True
+        ).first()
 
     if request.method == 'POST':
         course = request.POST.get('selected_course')
@@ -78,7 +105,7 @@ def class_check(request):
         action = request.POST.get('action')
         if action == 'checkin':
             try:
-                student = Students.objects.get(western_id=western_id)
+                student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
                 
                 # Create the checkin record
@@ -97,10 +124,10 @@ def class_check(request):
                 return redirect('/monitor/class-check/')
         elif action == 'checkout':
             try:
-                student = Students.objects.get(western_id=western_id)
+                student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
 
-                checkin = Checkin.objects.get(student=student, class_field=class_obj,checkout_time__isnull=True)
+                checkin = Checkin.objects.filter(student=student, class_field=class_obj,checkout_time__isnull=True).first()
                 checkin.checkout_time = timezone.now()
                 checkin.save()
 
@@ -112,10 +139,14 @@ def class_check(request):
                 print("Student signed in!")
                 return redirect('/monitor/class-check/')
         elif action == 'switch':
+            #this is where we want to just swap the class checked in with the new selected class.
+                return redirect('/monitor/class-select/')
+        elif action == 'addclass':
+            #take back to setup
                 return redirect('/monitor/class-select/')
 
 
-    student = Students.objects.get(western_id=western_id)
+    student = Students.objects.get(student_id=student_id)
 
     student_classes = student.classes.all()
         # Now you have all the classes this student is associated with
@@ -133,13 +164,14 @@ def class_check(request):
 
     
 
-#Class Setup Page
-
+#------------------------------------------------------------------------
+#Initial Setup Class Page
+#------------------------------------------------------------------------
 def class_select(request):
     #grab stored login
-    student_id = request.session.get('western_id')
+    student_id = request.session.get('student_id')
 
-    student = Students.objects.filter(western_id = int(student_id)).first()
+    student = Students.objects.filter(student_id = int(student_id)).first()
     # if not student_id:
     #     return redirect('index')  # Redirect if no student in session
 

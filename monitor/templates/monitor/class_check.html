@@ -3,7 +3,7 @@
 {% block title %}Monitor{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container ml-0 mt-5">
     <div class="row">
         <div class="col">
             <h1 style="color:white">Student Sign-in</h1>
@@ -11,7 +11,7 @@
     </div>
 </div>
 
-<div class="card p-2 m-4">
+<div class="card p-2 m-4 shadow-lg">
     <div class="card-body">
         <h3>Welcome {{ student_name }}!</h3>
         
@@ -38,11 +38,12 @@
             </ul>
 
             {% if signed_in == False %}
-            <button type="submit" name="action" value="checkin" class="btn btn-primary mt-3"><i class="fa-solid fa-circle-check"></i> Check In</button>
+            <button type="submit" name="action" value="checkin" class="btn btn-primary me-2 mt-3 p-3 h3"><i class="fa-solid fa-circle-check"></i> Check In</button>
             {% else %}
-            <button type="submit" name="action" value="checkout" class="btn btn-primary me-2"><i class="fa-solid fa-door-open"></i> Check Out</button>
-            <button type="submit" name="action" value="swap" class="btn btn-primary"><i class="fa-solid fa-right-left"></i>Switch Class</button>
+            <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
+            <button type="submit" name="action" value="swap" class="btn btn-warning me-2 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
             {% endif %}
+            <button type="submit" name="action" value="addclass" class="btn btn-success me-2 p-3 h3"><i class="fa-solid fa-graduation-cap"></i> New Class</button>
         </form>
 
 {% endblock %}
