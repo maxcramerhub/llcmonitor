@@ -10,6 +10,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 import json
+from django.contrib import messages
 
 #Enter StuID or Name Sign In Page
 
@@ -86,8 +87,9 @@ def class_check(request):
                     student=student,
                     class_field=class_obj
                 )
-                
-                # Optionally redirect to a confirmation page
+
+                messages.success(request, f'Thanks for checking in to {class_obj.class_id}!')
+                messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
@@ -98,9 +100,12 @@ def class_check(request):
                 student = Students.objects.get(western_id=western_id)
                 class_obj = Class.objects.get(class_id=course)
 
-                checkin = Checkin.objects.get(student=student, class_field=class_obj)
+                checkin = Checkin.objects.get(student=student, class_field=class_obj,checkout_time__isnull=True)
                 checkin.checkout_time = timezone.now()
                 checkin.save()
+
+                messages.success(request, f'Thanks for checking out of {class_obj.class_id}!')
+                messages.info(request, 'Leave a review of your experience?')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
