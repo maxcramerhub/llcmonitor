@@ -20,7 +20,7 @@ class Class(models.Model):
     class_name = models.CharField(max_length=200)
     instructor = models.CharField(max_length=200)
     semester = models.CharField(max_length=100)
-    
+    class_number = models.CharField(max_length = 3)
 
     class Meta:
         managed = True
