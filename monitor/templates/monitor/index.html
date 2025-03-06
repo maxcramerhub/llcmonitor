@@ -11,16 +11,18 @@
     </div>
 </div>
 
-<div class="card p-2 m-4">
+<!-- initial check in view -->
+<div class="card p-2 m-4 shadow-lg">
     <div class="card-body">
         <div class="card-body">
             <form method="post" action = "{% url 'monitor:index' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label for="sid" class="form-label">Swipe SID Card or Enter SID Manually</label>
-                    <input type="text" class="form-control" name="login" placeholder="Enter SID or First and Last Name">
-                </div>
-                <button type = 'submit'  class="btn btn-primary">Sign in!</a>
+                    <div class="mb-4">
+                        <label for="sid" class="form-label fs-3">Swipe SID Card or Enter SID Manually or Enter Your Name!</label>
+                        <input type="text" class="form-control form-control-lg p-3 fs-4" name="login" placeholder="Enter SID or First and Last Name">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg p-3 fs-4 w-100 shadow-sm">Sign in!</button>
             </form>
         </div>
 </div>

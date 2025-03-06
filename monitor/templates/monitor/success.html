@@ -3,11 +3,18 @@
 {% block title %}Success{% endblock %}
 
 {% block content %}
+
+<!-- dynamic success page with interval -->
 <div class="container mt-5 text-center">
-    <div class="alert alert-success">
-        <h2>Hello "Name"</h2>
-        <h3>Successfully Signed In for "Class"</h3>
-    </div>
+    <div class="alert alert-info">
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            <h1>{{ message }}<h1>
+        {% else %}
+            <h2>{{ message }}</h2>
+        {% endif %}
+    {% endfor %}
+    </div>  
 </div>
 
 <script>
