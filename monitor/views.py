@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from monitor.models import *
 from django.shortcuts import render, redirect
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 import json
 
@@ -26,6 +27,7 @@ def index(request):
                 #TODO: Change to setup once created
                 student = Students.objects.create(western_id = login)
                 request.session['western_id'] = student.western_id
+                request.session['student_id'] = student.student_id
                 return redirect('class-select/')
 
         elif all(x.isalpha() or x.isspace() for x in login):
@@ -52,40 +54,68 @@ def success(request):
 #Pick Class you are there for
 
 def class_check(request):
-    student_id = request.session.get('western_id')
+    western_id = request.session.get('western_id')
+    student_id = request.session.get('student_id')
 
-    try: 
-        most_recent_checkin = Checkin.objects.filter(student_id=student_id).order_by('-checkin_time').first()
-    except e:
-        print("NONE FOUND")
+    student = Students.objects.get(western_id=western_id)
+    signed_in = Checkin.objects.filter(
+            student=student, 
+            checkout_time__isnull=True
+        ).exists()
 
+    print(signed_in)
+    print(signed_in)
+    print(signed_in)
+    print(signed_in)
+    print(signed_in)
+    print(signed_in)
 
     if request.method == 'POST':
         course = request.POST.get('selected_course')
-        try:
-            student = Students.objects.get(id=student_id)
-            class_obj = Class.objects.get(class_id=selected_class_id)
+        print(course)
+        print(student_id)
+        action = request.POST.get('action')
+        if action == 'checkin':
+            try:
+                student = Students.objects.get(western_id=western_id)
+                class_obj = Class.objects.get(class_id=course)
+                
+                # Create the checkin record
+                checkin = Checkin.objects.create(
+                    checkin_time=timezone.now(),
+                    student=student,
+                    class_field=class_obj
+                )
+                
+                # Optionally redirect to a confirmation page
+                return redirect('monitor:success')
+            except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
-            # Create the checkin record
-            checkin = Checkin.objects.create(
-                checkin_time=timezone.now(),
-                student=student,
-                class_field=class_obj
-            )
+                print("Student signed in!")
+                return redirect('/monitor/class-check/')
+        elif action == 'checkout':
+            try:
+                student = Students.objects.get(western_id=western_id)
+                class_obj = Class.objects.get(class_id=course)
+
+                checkin = Checkin.objects.get(student=student, class_field=class_obj)
+                checkin.checkout_time = timezone.now()
+                checkin.save()
+                return redirect('monitor:success')
+            except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
-            # Optionally redirect to a confirmation page
-            return redirect('monitor:success')
-        except (Students.DoesNotExist, Class.DoesNotExist) as e:
-        
-            print("Student signed in!")
-            return redirect('/monitor/class-check/')
+                print("Student signed in!")
+                return redirect('/monitor/class-check/')
+        elif action == 'switch':
+                return redirect('/monitor/class-select/')
 
 
-    student = Students.objects.get(western_id=student_id)
+    student = Students.objects.get(western_id=western_id)
 
     student_classes = student.classes.all()
         # Now you have all the classes this student is associated with
     context = {
+            'signed_in': signed_in,
             'student': student,
             'classes': student_classes
     }
