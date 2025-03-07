@@ -1,4 +1,5 @@
 # llcmonitor
+![llclogo](https://github.com/user-attachments/assets/678f3f81-c250-4ce1-83ed-d1c6324ae1b0)
 
 **Code Review:**
 
