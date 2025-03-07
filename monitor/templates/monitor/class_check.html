@@ -19,29 +19,29 @@
         <form method="POST" action="{% url 'monitor:class_check' %}">
             {% csrf_token %}
             <ul class="nav nav-tabs" id="subjectTabs" role="tablist">
-            <!-- tabs based on subjects in views.py -->
                 {% for class in classes %}
-                <li class="nav-item">
-                    <input type="radio" name="selected_course" id="class_{{ class.id }}" 
-                        value="{{ class.class_name }}" 
-                        {% if forloop.first %}checked{% endif %} 
-                        class="btn-check">
-                    <label class="nav-link {% if forloop.first %}active{% endif %}"
-                        for="class_{{ class.id }}"
-                        id="{{ subject|slugify }}-tab"
-                        data-bs-toggle="tab"
-                        data-bs-target="#{{ subject|slugify }}">
-                        {{ class.class_name }}
-                    </label>
-                </li>
+                    <li class="nav-item">
+                        <input type="radio" name="selected_course" id="class_{{ class.class_id }}" 
+                            value="{{ class.class_id }}" 
+                            {% if forloop.first %}checked{% endif %} 
+                            class="btn-check">
+                        <label class="nav-link {% if forloop.first %}active{% endif %}"
+                            for="class_{{ class.class_id }}"
+                            id="{{ class.class_name|slugify }}-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#{{ class.class_name|slugify }}"
+                            onclick="document.getElementById('class_{{ class.class_id }}').checked = true;">
+                            {{ class.class_name }}
+                        </label>
+                    </li>
                 {% endfor %}
             </ul>
 
             {% if signed_in == False %}
-            <button type="submit" name="action" value="checkin" class="btn btn-primary me-2 mt-3 p-3 h3"><i class="fa-solid fa-circle-check"></i> Check In</button>
+                <button type="submit" name="action" value="checkin" class="btn btn-primary me-2 mt-3 p-3 h3"><i class="fa-solid fa-circle-check"></i> Check In</button>
             {% else %}
-            <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 mt-3 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
-            <button type="submit" name="action" value="swap" class="btn btn-warning me-2 mt-3 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
+                <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 mt-3 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
+                <button type="submit" name="action" value="swap" class="btn btn-warning me-2 mt-3 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
             {% endif %}
             <button type="submit" name="action" value="addclass" class="btn btn-success me-2 mt-3 p-3 h3"><i class="fa-solid fa-graduation-cap"></i> New Class</button>
         </form>
