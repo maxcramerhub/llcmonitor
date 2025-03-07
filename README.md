@@ -18,7 +18,7 @@ this contains the models for our db
 ```monitor/templates/monitor```
 this contains all of our views
 
-```monitor/llcsite```
+```/llcsite/```
 this is the base project
 
 ```/templates/base.html```
