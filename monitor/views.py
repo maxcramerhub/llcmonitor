@@ -129,11 +129,11 @@ def class_check(request):
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
 
-                checkin = Checkin.objects.filter(student=student, class_field=class_obj,checkout_time__isnull=True).first()
+                checkin = Checkin.objects.filter(student=student, checkout_time__isnull=True).first()
                 checkin.checkout_time = timezone.now()
                 checkin.save()
 
-                messages.success(request, f'Thanks for checking out of {class_obj.class_id}!')
+                messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}!')
                 messages.info(request, 'Leave a review of your experience?')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
