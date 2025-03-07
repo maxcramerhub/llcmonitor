@@ -4,16 +4,22 @@
 
 This is a webapp built with django to handle checking in, out, switching, classes.
 A base django project has quite a bit in it but here are the main pieces
+
 ```/monitor/```
 this is our  app
+
 ```monitor/views.py```
 this contains all the logic behind our views
+
 ```monitor/models.py```
 this contains the models for our db
+
 ```monitor/templates/monitor```
 this contains all of our views
+
 ```monitor/llcsite```
 this is the base project
+
 ```/templates/base.html```
 this is included in all of our views
 
