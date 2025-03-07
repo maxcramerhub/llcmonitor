@@ -29,6 +29,7 @@ def index(request):
             class_exist = student.classes.count() if student else 0
             #If we found a student
             if student and class_exist > 0:
+                request.session['student_id'] = student.student_id
                 return redirect('class-check/')
             elif student and class_exist == 0:
                 student = Students.objects.get(western_id = login)
@@ -56,7 +57,7 @@ def index(request):
             elif student and class_exist == 0:
                 student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=0)
                 request.session['student_id'] = student.student_id
-                return redirect('class-select/')
+                return redirect('class-select/', type)
             else:
                 #TODO: Change to setup once created
                 student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=0)
@@ -82,7 +83,7 @@ def success(request):
 
 def class_check(request):
     student_id = request.session.get('student_id')
-
+    print(str(student_id))
     student = Students.objects.get(student_id=student_id)
 
     #we want to grab the checkin object and see if it exists...
@@ -107,7 +108,6 @@ def class_check(request):
             try:
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
-                
                 # Create the checkin record
                 checkin = Checkin.objects.create(
                     checkin_time=timezone.now(),
@@ -115,7 +115,7 @@ def class_check(request):
                     class_field=class_obj
                 )
 
-                messages.success(request, f'Thanks for checking in to {class_obj.class_id}!')
+                messages.success(request, f'Thanks for checking in to {class_obj.class_name}!')
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -127,11 +127,12 @@ def class_check(request):
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
 
-                checkin = Checkin.objects.filter(student=student, class_field=class_obj,checkout_time__isnull=True).first()
+                print(str(student), str(class_obj))
+                checkin = Checkin.objects.filter(student=student, checkout_time__isnull=True).first()
                 checkin.checkout_time = timezone.now()
                 checkin.save()
 
-                messages.success(request, f'Thanks for checking out of {class_obj.class_id}!')
+                messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}!')
                 messages.info(request, 'Leave a review of your experience?')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -181,16 +182,17 @@ def class_select(request):
         
         # Now selected_courses is a list containing all the checked values
         print(f"Selected courses: {selected_courses}")
-        for course_id in selected_courses:
+        for course_name in selected_courses:
             try:
                 # Get the class object
-                class_obj = Class.objects.get(class_id=course_id)
+                class_obj = Class.objects.get(class_name=course_name)
                 student.classes.add(class_obj)
-
+                
             except Class.DoesNotExist:
                 # Handle case where class doesn't exist
-                print(f"Class with ID {course_id} does not exist")
-                class_obj = Class.objects.create(class_id=course_id)
+                course_number = course_name[-3:]
+                print(f"Class with name {course_name} does not exist")
+                class_obj = Class.objects.create(class_name=course_name, class_number = course_number)
                 student.classes.add(class_obj)
         
         # Optionally, save the student to ensure changes are committed
