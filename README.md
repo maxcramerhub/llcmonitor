@@ -14,3 +14,12 @@ inside /monitor/templates/monitor you can add new views or update existing ones
 ```models.py``` will be where we can manipulate data from db eventually
 
 checkout https://docs.djangoproject.com/en/5.1/intro/tutorial01/ for more
+
+Troubleshooting:
+
+You might need to run migrations
+```python manage.py makemigrations```
+```python manage.py migrate```
+or create the cache table
+```python manage.py createcachetable```
+or install further packages using pip3
