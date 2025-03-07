@@ -84,7 +84,7 @@ def success(request):
 
 def class_check(request):
     student_id = request.session.get('student_id')
-
+    print(str(student_id))
     student = Students.objects.get(student_id=student_id)
 
     #we want to grab the checkin object and see if it exists...
@@ -109,7 +109,6 @@ def class_check(request):
             try:
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
-                
                 # Create the checkin record
                 checkin = Checkin.objects.create(
                     checkin_time=timezone.now(),
@@ -129,6 +128,7 @@ def class_check(request):
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
 
+                print(str(student), str(class_obj))
                 checkin = Checkin.objects.filter(student=student, checkout_time__isnull=True).first()
                 checkin.checkout_time = timezone.now()
                 checkin.save()
