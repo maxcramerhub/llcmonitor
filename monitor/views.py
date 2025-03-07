@@ -141,8 +141,25 @@ def class_check(request):
                 print("Student signed in!")
                 return redirect('/monitor/class-check/')
         elif action == 'switch':
+            student = Students.objects.get(student_id=student_id)
+            class_obj = Class.objects.get(class_id=course)
+
+            print("trying to switch!!")
             #this is where we want to just swap the class checked in with the new selected class.
-                return redirect('/monitor/class-select/')
+            checkin = Checkin.objects.filter(student=student, checkout_time__isnull=True).first()
+            checkin.checkout_time = timezone.now()
+            checkin.save()
+
+            # Create the checkin record
+            checkin = Checkin.objects.create(
+                checkin_time=timezone.now(),
+                student=student,
+                class_field=class_obj
+            )
+            
+            messages.success(request, f'Thanks for checking in to {class_obj.class_name}!')
+            messages.info(request, 'Please come back to check out when you are done!')
+            return redirect('monitor:success')
         elif action == 'addclass':
             #take back to setup
                 return redirect('/monitor/class-select/')
