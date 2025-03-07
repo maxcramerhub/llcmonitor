@@ -29,6 +29,7 @@ def index(request):
             class_exist = student.classes.count() if student else 0
             #If we found a student
             if student and class_exist > 0:
+                request.session['student_id'] = student.student_id
                 return redirect('class-check/')
             elif student and class_exist == 0:
                 student = Students.objects.get(western_id = login)
@@ -82,7 +83,7 @@ def success(request):
 
 def class_check(request):
     student_id = request.session.get('student_id')
-
+    print(str(student_id))
     student = Students.objects.get(student_id=student_id)
 
     #we want to grab the checkin object and see if it exists...
@@ -107,7 +108,6 @@ def class_check(request):
             try:
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
-                print(class_obj)
                 # Create the checkin record
                 checkin = Checkin.objects.create(
                     checkin_time=timezone.now(),
@@ -127,6 +127,7 @@ def class_check(request):
                 student = Students.objects.get(student_id=student_id)
                 class_obj = Class.objects.get(class_id=course)
 
+                print(str(student), str(class_obj))
                 checkin = Checkin.objects.filter(student=student, checkout_time__isnull=True).first()
                 checkin.checkout_time = timezone.now()
                 checkin.save()

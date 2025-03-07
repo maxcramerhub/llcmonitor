@@ -18,59 +18,59 @@
         <h3>Hello {{ student_name }}!</h3>
         
         <h4>Add Your Classes</h4>
-        
-        <ul class="nav nav-tabs" id="subjectTabs" role="tablist">
+        <form method="POST" action="{% url 'monitor:class_select' %}">
+          {% csrf_token %}
+          <ul class="nav nav-tabs" id="subjectTabs" role="tablist">
+            <!-- tabs based on subjects in views.py -->
+              {% for subject in subjects %}
+              <li class="nav-item">
+                  <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                          id="{{ subject|slugify }}-tab" 
+                          data-bs-toggle="tab" 
+                          data-bs-target="#{{ subject|slugify }}" 
+                          type="button" 
+                          >
+                      {{ subject }}
+                  </button>
+              </li>
+              {% endfor %}
+          </ul>
+
           <!-- tabs based on subjects in views.py -->
-            {% for subject in subjects %}
-            <li class="nav-item">
-                <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                        id="{{ subject|slugify }}-tab" 
-                        data-bs-toggle="tab" 
-                        data-bs-target="#{{ subject|slugify }}" 
-                        type="button" 
-                        >
-                    {{ subject }}
-                </button>
-            </li>
-            {% endfor %}
-        </ul>
 
-        <!-- tabs based on subjects in views.py -->
+          <div class="tab-content mt-3" id="subjectTabContent">
+              {% for subject in subjects %}
+              <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                  id="{{ subject|slugify }}"
+                  role="tabpanel">
+                
+                  <div class="row">
+                  <!-- sort courses based on tabs -->
+                    {% for course in courses %}
+                      {% if course.Subject == subject %}
+                      <div class="col-md-4 mb-2">
 
-        <div class="tab-content mt-3" id="subjectTabContent">
-            {% for subject in subjects %}
-            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
-                 id="{{ subject|slugify }}"
-                 role="tabpanel">
-              <form method="POST" action="{% url 'monitor:class_select' %}">
-                {% csrf_token %}
-                <div class="row">
-                <!-- sort courses based on tabs -->
-                  {% for course in courses %}
-                    {% if course.Subject == subject %}
-                    <div class="col-md-4 mb-2">
-
-                    <!-- store important data in value -->
-                      <input type="checkbox" 
-                            class="btn-check" 
-                            name="selected_course" 
-                            id="{{ course.Course_Number }}" 
-                            value="{{ course.Title }}-{{ course.Course_Number }}"
-                            autocomplete="off">
-                      <label class="btn btn-outline-danger w-100 p-4 text-start shadow-sm" for="{{ course.Course_Number }}">
-                        {{ course.Title }} ({{ course.Course_Number }})
-                      </label>
-                    </div>
-                    {% endif %}
-                  {% endfor %}
-                </div>
-                <button type="submit" class="btn btn-primary mt-3 p-3 h3 shadow">
-                  <i class="fa-solid fa-circle-check"></i> Finish Setup
-                </button>
-              </form>
+                      <!-- store important data in value -->
+                        <input type="checkbox" 
+                              class="btn-check" 
+                              name="selected_course" 
+                              id="{{ subject|slugify }}-{{ course.Course_Number }}" 
+                              value="{{ course.Title }}-{{ course.Course_Number }}"
+                              autocomplete="off">
+                        <label class="btn btn-outline-danger w-100 p-4 text-start shadow-sm" for="{{ subject|slugify }}-{{ course.Course_Number }}"">
+                          {{ course.Title }} ({{ course.Course_Number }})
+                        </label>
+                      </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  <button type="submit" class="btn btn-primary mt-3 p-3 h3 shadow">
+                    <i class="fa-solid fa-circle-check"></i> Finish Setup
+                  </button>
+              </div>
+              {% endfor %}
             </div>
-            {% endfor %}
-          </div>
+          </form>
 
 <div class="card m-4 p-2">
     <div class="card-body">
