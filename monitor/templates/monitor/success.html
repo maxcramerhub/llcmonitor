@@ -9,6 +9,7 @@
     <div class="alert alert-info">
     {% for message in messages %}
         {% if message.tags == 'success' %}
+            <h1 id="random"></h1>
             <h1>{{ message }}<h1>
         {% else %}
             <h2>{{ message }}</h2>
@@ -18,6 +19,21 @@
 </div>
 
 <script>
+    // for fun :)
+    const icons = [
+        "fa-solid fa-hand-sparkles",
+        "fa-solid fa-trophy",
+        "fa-solid fa-thumbs-up",
+        "fa-solid fa-hat-wizard",
+        "fa-regular fa-face-smile"
+    ];
+    const randomIndex = Math.floor(Math.random() * icons.length);
+    const selectedIcon = icons[randomIndex];
+    
+    const item = document.getElementById('random');
+    item.innerHTML = `<i class="${selectedIcon}"></i>`;
+
+
     let timeLeft = 3;
     
     const countdown = setInterval(function() {

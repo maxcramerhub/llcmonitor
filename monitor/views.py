@@ -29,6 +29,7 @@ def index(request):
             class_exist = student.classes.count() if student else 0
             #If we found a student
             if student and class_exist > 0:
+                request.session['student_id'] = student.student_id
                 return redirect('class-check/')
             elif student and class_exist == 0:
                 student = Students.objects.get(western_id = login)
@@ -52,6 +53,7 @@ def index(request):
             class_exist = student.classes.count() if student else 0
             #If we found a student
             if student and class_exist > 0:
+                request.session['student_id'] = student.student_id
                 return redirect('class-check/')
             elif student and class_exist == 0:
                 student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=0)
