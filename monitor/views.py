@@ -17,6 +17,8 @@ from django.contrib import messages
 #------------------------------------------------------------------------
 
 def index(request):
+    name = request.session.pop('student_name', None)
+    student_id = request.session.pop('student_id', None)
     if request.method == 'POST':
         login = request.POST.get('login')
 
@@ -53,15 +55,19 @@ def index(request):
             class_exist = student.classes.count() if student else 0
             #If we found a student
             if student and class_exist > 0:
+                request.session['student_name'] = loginArr[0]
+                request.session['student_id'] = student.student_id
                 return redirect('class-check/')
             elif student and class_exist == 0:
-                student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=0)
+                student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=None)
                 request.session['student_id'] = student.student_id
+                request.session['student_name'] = loginArr[0]
                 return redirect('class-select/', type)
             else:
                 #TODO: Change to setup once created
-                student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=0)
+                student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=None)
                 request.session['student_id'] = student.student_id
+                request.session['student_name'] = loginArr[0]
                 return redirect('class-select/')
 
 
@@ -75,6 +81,8 @@ def index(request):
 #------------------------------------------------------------------------
 
 def success(request):
+    name = request.session.pop('student_name', None)
+    student_id = request.session.pop('student_id', None)
     return render(request, 'monitor/success.html')
 
 #------------------------------------------------------------------------
@@ -191,6 +199,8 @@ def class_select(request):
     student_id = request.session.get('student_id')
 
     student = Students.objects.filter(student_id = int(student_id)).first()
+
+    student_classes = student.classes.all()
     # if not student_id:
     #     return redirect('index')  # Redirect if no student in session
 
@@ -307,19 +317,23 @@ def class_select(request):
     else:
         llcs = cached_data
 
+    name = request.session.get('student_name')
+    if name == None:
+        name = ""
 
+
+    array = []
+    for student_class in student_classes:
+        array.append(student_class.class_name)
+
+    print(array)
     context = {
-        'student_name': 'Max',
+        'student_name': name,
         'courses': llcs,  # Full list of unique courses
         'yours': llcs[:5],  # First 5 unique courses
-        'subjects': subjects
+        'subjects': subjects,
+        'classes': array
     }
-
-
-    #admin info 
-
-    #llcadmin
-    #learnbetter
 
     return render(request, 'monitor/class_select.html', context)
 

@@ -56,7 +56,10 @@
                               name="selected_course" 
                               id="{{ subject|slugify }}-{{ course.Course_Number }}" 
                               value="{{ course.Title }}-{{ course.Course_Number }}"
-                              autocomplete="off">
+                              {% if course.Title|add:"-"|add:course.Course_Number in classes %}checked{% endif %}
+                              autocomplete="off"               
+                              >
+                              <!-- need to value check between slugified Title and course number with classes.  if so leave as checked.-->
                         <label class="btn btn-outline-danger w-100 p-4 text-start shadow-sm" for="{{ subject|slugify }}-{{ course.Course_Number }}"">
                           {{ course.Title }} ({{ course.Course_Number }})
                         </label>
