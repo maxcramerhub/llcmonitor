@@ -323,6 +323,5 @@ def class_select(request):
 
     return render(request, 'monitor/class_select.html', context)
 
-
-
-    
+def admin_login(request):
+    pass
