@@ -4,7 +4,7 @@ class Students(models.Model):
     student_id = models.AutoField(primary_key=True)
     fname = models.CharField(max_length=100)
     lname = models.CharField(max_length=100)
-    western_id = models.IntegerField(unique=True)
+    western_id = models.IntegerField(null=True, blank=True, unique=True)
 
     classes = models.ManyToManyField('Class', related_name='students')
 
