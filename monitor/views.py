@@ -199,6 +199,8 @@ def class_select(request):
     student_id = request.session.get('student_id')
 
     student = Students.objects.filter(student_id = int(student_id)).first()
+
+    student_classes = student.classes.all()
     # if not student_id:
     #     return redirect('index')  # Redirect if no student in session
 
@@ -318,18 +320,20 @@ def class_select(request):
     name = request.session.get('student_name')
     if name == None:
         name = ""
+
+
+    array = []
+    for student_class in student_classes:
+        array.append(student_class.class_name)
+
+    print(array)
     context = {
         'student_name': name,
         'courses': llcs,  # Full list of unique courses
         'yours': llcs[:5],  # First 5 unique courses
-        'subjects': subjects
+        'subjects': subjects,
+        'classes': array
     }
-
-
-    #admin info 
-
-    #llcadmin
-    #learnbetter
 
     return render(request, 'monitor/class_select.html', context)
 
