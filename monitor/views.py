@@ -343,6 +343,7 @@ def class_select(request):
 #------------------------------------------------------------------------
 #'Secure' Admin Login
 #------------------------------------------------------------------------
+loginUser = None
 def admin_login(request):
     if request.method == 'POST':
         requestUser = request.POST.get('username')
@@ -350,9 +351,10 @@ def admin_login(request):
         user = Faculty.objects.filter(username = requestUser).first()
         global loginUser
         if user.password == requestPass:
+            #redirect to data
             loginUser = user
-            print('logged in')
         else:
+            #redirect back to login with error
             print('Invalid login')
     
     return render(request, 'monitor/admin_login.html')
