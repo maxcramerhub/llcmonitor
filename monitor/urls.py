@@ -8,5 +8,5 @@ urlpatterns = [
     path('class-select/', views.class_select, name='class_select'),
     path('class-check/', views.class_check, name='class_check'),
     path('success/', views.success, name='success'),
-    path('admin/', views.admin_login, name = 'admin-login')
+    path('admin/', views.admin_login, name = 'admin_login')
 ]
