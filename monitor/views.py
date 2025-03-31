@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
+from monitor.models import Students
 
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
@@ -25,7 +26,10 @@ def index(request):
         #************************
         # login is numeric
         #************************
-        if all(x.isnumeric() for x in login):
+        # so this if all(x.isnumeric() for x in login and len(login) == 7):
+
+        # if all(x.isnumeric() for x in login):
+        if login.isdigit() and len(login) == 7:  # 
 
             student = Students.objects.filter(western_id = int(login)).first()
             class_exist = student.classes.count() if student else 0
@@ -42,37 +46,76 @@ def index(request):
                 student = Students.objects.create(western_id = login)
                 request.session['student_id'] = student.student_id
                 return redirect('class-select/')
+        
+
+        
+        # else:
+        #     messages.error(request, "Please enter only numbers if entering an ID")
+        #     return render(request, 'monitor/index.html')
+
 
         #************************
         # login is a name
         #************************
         elif all(x.isalpha() or x.isspace() for x in login):
             loginArr = login.split()
-            print(loginArr)
-            student = Students.objects.filter(fname = loginArr[0], lname = loginArr[1]).first()
-            print(student)
+
+            if len(loginArr) < 2:
+                messages.error(request, "Please enter a first and last name.")
+                return render(request, 'monitor/index.html')
             
-            class_exist = student.classes.count() if student else 0
+            # print(loginArr) , try to
+            student = Students.objects.filter(fname = loginArr[0], lname = loginArr[1]).first()
+
+            # student = Students.objects.filter(fname="John", lname="Doe", western_id=None)
+            # print(student)
+
+            class_exist = 0
+
+            if not student:
+                student = Students.objects.create(fname=loginArr[0], lname=loginArr[1], western_id=None)
+            
+            #check this, im thinking this is storing the naems so it will display across multiple 
+            request.session['student_name'] = student.fname
+            request.session['student_id'] = student.student_id
+                
+            class_exist = student.classes.count()
+
             #If we found a student
-            if student and class_exist > 0:
+            # if student and class_exist > 0:
+            if class_exist > 0: #student has classes
                 request.session['student_name'] = loginArr[0]
                 request.session['student_id'] = student.student_id
-                return redirect('class-check/')
-            elif student and class_exist == 0:
-                student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=None)
-                request.session['student_id'] = student.student_id
-                request.session['student_name'] = loginArr[0]
-                return redirect('class-select/', type)
-            else:
-                #TODO: Change to setup once created
-                student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=None)
+                return redirect('class-check/') 
+            else: #student and class_exist == 0:
+                #student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=None)
                 request.session['student_id'] = student.student_id
                 request.session['student_name'] = loginArr[0]
                 return redirect('class-select/')
+           
+            # else:
+            #     #TODO: Change to setup once created
+            #     student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=None)
+            #     request.session['student_id'] = student.student_id
+            #     request.session['student_name'] = loginArr[0]
+            #     return redirect('class-select/')
 
 
-        else:
+            if student:
+                request.session['student_name'] = loginArr[0]
+                request.session['student_id'] = student.student_id
+                return redirect('class-select/')
+            else:
+                messages.error(request, "There was an issue creating your student record.")
+                return render(request, 'monitor/index.html') #return to the login page
+            
+            #TODO finish this section, send error message 
+        
+        elif not login.isdigit() or len(login) != 7:  #check to make sure id is 7 numbers and all numbers
+            messages.error(request, "Please re-enter ID - must be 7 numbers")
             return render(request, 'monitor/index.html')
+        
+        
     else:
         return render(request, 'monitor/index.html')
 
@@ -90,6 +133,7 @@ def success(request):
 #------------------------------------------------------------------------
 
 def class_check(request):
+    # student_name = request.session.get('student_name')
     student_id = request.session.get('student_id')
     print(str(student_id))
     student = Students.objects.get(student_id=student_id)
@@ -123,7 +167,7 @@ def class_check(request):
                     class_field=class_obj
                 )
 
-                messages.success(request, f'Thanks for checking in to {class_obj.class_name}!')
+                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {request.session.get("student_name")}!')
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -140,7 +184,7 @@ def class_check(request):
                 checkin.checkout_time = timezone.now()
                 checkin.save()
 
-                messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}!')
+                messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}, {request.session.get("student_name")}!')
                 messages.info(request, 'Leave a review of your experience?')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -165,7 +209,7 @@ def class_check(request):
                     class_field=class_obj
                 )
                 
-                messages.success(request, f'Thanks for checking in to {class_obj.class_name}!')
+                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {request.session.get("student_name")}!')
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
         elif action == 'addclass':
@@ -180,7 +224,8 @@ def class_check(request):
     context = {
             'signed_in': signed_in,
             'student': student,
-            'classes': student_classes
+            'classes': student_classes,
+            'student_name': request.session.get('student_name', '')
     }
     # if not student_id:
     #     return redirect('index')
