@@ -26,10 +26,10 @@ def index(request):
         #************************
         # login is numeric
         #************************
-        # so this if all(x.isnumeric() for x in login and len(login) == 7):
+        # so this if all(x.isnumeric() for x in login and len(login) == 6):
 
         # if all(x.isnumeric() for x in login):
-        if login.isdigit() and len(login) == 7:  # 
+        if login.isdigit() and len(login) == 6:  # 
 
             student = Students.objects.filter(western_id = int(login)).first()
             class_exist = student.classes.count() if student else 0
@@ -111,8 +111,8 @@ def index(request):
             
             #TODO finish this section, send error message 
         
-        elif not login.isdigit() or len(login) != 7:  #check to make sure id is 7 numbers and all numbers
-            messages.error(request, "Please re-enter ID - must be 7 numbers")
+        elif not login.isdigit() or len(login) != 6:  #check to make sure id is 6 numbers and all numbers
+            messages.error(request, "Please re-enter ID - must be 6 numbers")
             return render(request, 'monitor/index.html')
         
         
