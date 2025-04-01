@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Visualize Check Ins{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="text-center" style="color:whitesmoke">Check-In Data</h1>
+        </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+          <div style="background-color: white; padding: 20px; border-radius: 20px;" class="shadow-lg mb-5">
+              <div class="table-responsive">
+                  <table class="table table-striped">
+                      <thead class="thead-dark">
+                          <tr>
+                              <th>Check In Time</th>
+                              <th>Check Out Time</th>
+                              <th>Duration (hrs)</th>
+                              <th>Student</th>
+                              <th>Class</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for checkin in data %}
+                          <tr>
+                              <td>{{ checkin.checkin_time }}</td>
+                              <td>{{ checkin.checkout_time }}</td>
+                              <td>
+                                {% if checkin.checkin_time and checkin.checkout_time %}
+                                    {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
+                                {% else %}
+                                    none
+                                {% endif %}
+                              </td>
+                              <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
+                              <td>Class #{{ checkin.class_field.id }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+  </div>
+
+    <div class="row">
+        <!-- Daily Check-ins Chart -->
+        <div class="col-md-6 mb-3">
+            <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
+                <h3 class="text-center">Daily Check-ins</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Classes Chart -->
+        <div class="col-md-6 mb-3">
+            <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
+                <h3 class="text-center">Top Classes by Attendance</h3>
+                <canvas id="classChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    //parse data into JSON to be used based on context.
+    const dailyData = JSON.parse('{{ daily_data|safe }}');
+    const weekdays = JSON.parse('{{ weekdays|safe }}');
+    const classNames = JSON.parse('{{ class_names|safe }}');
+    const classCounts = JSON.parse('{{ class_counts|safe }}');
+    const studentNames = JSON.parse('{{ student_names|safe }}');
+    const studentCounts = JSON.parse('{{ student_counts|safe }}');
+    const durationDates = JSON.parse('{{ duration_dates|safe }}');
+    const durationHours = JSON.parse('{{ duration_hours|safe }}');
+
+
+    // randome colors for graphs put into an array
+    function randomColor(count) {
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            colors.push(`rgba(${r}, ${g}, ${b}, 1)`);
+        }
+        return colors;
+    }
+
+    //daily checkins
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+            labels: weekdays,
+            datasets: [{
+                label: 'Number of Check-ins',
+                data: dailyData,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Check-ins'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Check-ins by Day of Week'
+                }
+            }
+        }
+    });
+
+    //top classes
+    const classCtx = document.getElementById('classChart').getContext('2d');
+    new Chart(classCtx, {
+        type: 'pie',
+        data: {
+            labels: classNames,
+            datasets: [{
+                data: classCounts,
+                backgroundColor: randomColor(classNames.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Top Classes by Number of Check-ins'
+                },
+                legend: {
+                    position: 'left'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

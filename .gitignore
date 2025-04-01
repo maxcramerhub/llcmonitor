@@ -7,3 +7,4 @@ mydatabase.sqlite3
 *.sqlite-journal
 *.sqlite3-journal
 *.db
+*.DS_Store
