@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
-from monitor.models import Students
+from django.contrib.auth import authenticate, login
 
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
@@ -384,4 +384,21 @@ def class_select(request):
 
 
 
+#------------------------------------------------------------------------
+#'Secure' Admin Login
+#------------------------------------------------------------------------
+loginUser = None
+def admin_login(request):
+    if request.method == 'POST':
+        requestUser = request.POST.get('username')
+        requestPass = request.POST.get('password')
+        user = Faculty.objects.filter(username = requestUser).first()
+        global loginUser
+        if user.password == requestPass:
+            #redirect to data
+            loginUser = user
+        else:
+            #redirect back to login with error
+            print('Invalid login')
     
+    return render(request, 'monitor/admin_login.html')
