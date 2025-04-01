@@ -87,6 +87,11 @@ def index(request):
                 request.session['student_name'] = loginArr[0]
                 request.session['student_id'] = student.student_id
                 return redirect('class-check/') 
+            elif student and class_exist == 0:
+                student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=None)
+                request.session['student_id'] = student.student_id
+                request.session['student_name'] = loginArr[0]
+                return redirect('class-select/', type)
             else: #student and class_exist == 0:
                 #student = Students.objects.get(fname = loginArr[0], lname = loginArr[1], western_id=None)
                 request.session['student_id'] = student.student_id
