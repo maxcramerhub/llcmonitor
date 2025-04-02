@@ -258,7 +258,7 @@ def class_check(request):
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
                 print("Student signed in!")
-                return redirect('/monitor/class-check/')
+                return redirect('/class-check/')
         elif action == 'checkout':
             try:
                 student = Students.objects.get(student_id=student_id)
@@ -275,7 +275,7 @@ def class_check(request):
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
                 print("Student signed in!")
-                return redirect('/monitor/class-check/')
+                return redirect('/class-check/')
         elif action == 'switch':
             #this is where we want to just swap the class checked in with the new selected class.
                 student = Students.objects.get(student_id=student_id)
@@ -299,7 +299,7 @@ def class_check(request):
                 return redirect('monitor:success')
         elif action == 'addclass':
             #take back to setup
-                return redirect('/monitor/class-select/')
+                return redirect('/class-select/')
 
 
     student = Students.objects.get(student_id=student_id)
@@ -356,7 +356,7 @@ def class_select(request):
         # Optionally, save the student to ensure changes are committed
         student.save()
         print("attempting to redirect")
-        return redirect('/monitor/class-check/')
+        return redirect('/class-check/')
             
         #for each selected course
             #create StudentClass joint thingy
