@@ -70,7 +70,7 @@ def visualize(request):
     # Average duration of check-ins
     avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
         .annotate(date=TruncDate('checkin_time'),
-                 duration=F('checkout_time') - F('checkin_time'))\
+                    duration=F('checkout_time') - F('checkin_time'))\
         .values('date')\
         .annotate(avg_duration=Avg('duration'))\
         .order_by('date')
@@ -109,6 +109,9 @@ def index(request):
         # so this if all(x.isnumeric() for x in login and len(login) == 6):
 
         # if all(x.isnumeric() for x in login):
+        if login[0] == ';':
+            login = login[9:15]
+
         if login.isdigit() and len(login) == 6:  # 
 
             student = Students.objects.filter(western_id = int(login)).first()
