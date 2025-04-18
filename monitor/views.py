@@ -88,6 +88,7 @@ def visualize(request):
         'student_counts': json.dumps(student_counts),
         'duration_dates': json.dumps(duration_dates),
         'duration_hours': json.dumps(duration_hours),
+        'tablist': ['Today','Weekly','Monthly','Semester','Tools']
     }
     
     return render(request, 'monitor/visualize.html', context)
