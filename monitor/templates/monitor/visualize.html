@@ -3,72 +3,121 @@
 {% block title %}Visualize Check Ins{% endblock %}
 
 {% block content %}
+
+<ul style="background-color: #6f1a29!important;" class="nav justify-content-end">
+    <a class="nav-link btn btn-outline-danger p-2 m-2" href="#" tabindex="-1" aria-disabled="true">Sign Out</a>
+  </li>
+</ul>
+
 <div class="container-fluid mt-4">
 
 
-    <div class="row mb-4">
-        <div class="col">
-            <h1 class="text-center" style="color:whitesmoke">Check-In Data</h1>
-        </div>
-    </div>
 
-    <div class="row">
-      <div class="col">
-          <div style="background-color: white; padding: 20px; border-radius: 20px;" class="shadow-lg mb-5">
-              <div class="table-responsive">
-                  <table class="table table-striped">
-                      <thead class="thead-dark">
-                          <tr>
-                              <th>Check In Time</th>
-                              <th>Check Out Time</th>
-                              <th>Duration (hrs)</th>
-                              <th>Student</th>
-                              <th>Class</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {% for checkin in data %}
-                          <tr>
-                              <td>{{ checkin.checkin_time }}</td>
-                              <td>{{ checkin.checkout_time }}</td>
-                              <td>
-                                {% if checkin.checkin_time and checkin.checkout_time %}
-                                    {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
-                                {% else %}
-                                    none
-                                {% endif %}
-                              </td>
-                              <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
-                              <td>Class #{{ checkin.class_field.id }}</td>
-                          </tr>
-                          {% endfor %}
-                      </tbody>
-                  </table>
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        {% for tab in tablist %}
+          <li class="nav-item text-white" role="presentation">
+            <button class="nav-link {% if forloop.first %}active{% endif %} p-4" 
+                    id="{{ tab }}-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#{{ tab }}" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="{{ tab }}" 
+                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+              {{ tab }}
+            </button>
+          </li>
+        {% endfor %}
+      </ul>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+
+        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">    <div class="row mb-4">
+          <div class="col">
+              <h3 class="text-center mt-4" style="color:whitesmoke">Today</h3>
+          </div>
+        </div>
+
+        <hr style="border-top: 8px solid #bbb;
+      border-radius: 5px;" class="rounded">
+
+        <div class="row">
+          <div class="col mb-0">
+              <div style="background-color: white; padding: 20px; border-radius: 20px;" class="shadow-lg mb-5">
+                  <div class="table-responsive">
+                      <table class="table table-striped">
+                          <thead class="thead-dark">
+                              <tr>
+                                  <th>Check In Time</th>
+                                  <th>Check Out Time</th>
+                                  <th>Duration (hrs)</th>
+                                  <th>Student</th>
+                                  <th>Class</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for checkin in data %}
+                              <tr>
+                                  <td>{{ checkin.checkin_time }}</td>
+                                  <td>{{ checkin.checkout_time }}</td>
+                                  <td>
+                                    {% if checkin.checkin_time and checkin.checkout_time %}
+                                        {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
+                                    {% else %}
+                                        none
+                                    {% endif %}
+                                  </td>
+                                  <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
+                                  <td>Class #{{ checkin.class_field.id }}</td>
+                              </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  </div>
+                  <button class="btn btn-primary">Export Check-Ins</button>
               </div>
           </div>
       </div>
-  </div>
-
-    <div class="row">
-        <!-- Daily Check-ins Chart -->
-        <div class="col-md-6 mb-3">
-            <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
-                <h3 class="text-center">Daily Check-ins</h3>
-                <canvas id="dailyChart"></canvas>
+    
+        <div class="row">
+            <!-- Daily Check-ins Chart -->
+            <div class="col-md-6 mb-3">
+                <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
+                    <h3 class="text-center">Daily Check-ins</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
             </div>
-        </div>
-
-        <!-- Top Classes Chart -->
-        <div class="col-md-6 mb-3">
-            <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
-                <h3 class="text-center">Top Classes by Attendance</h3>
-                <canvas id="classChart"></canvas>
+    
+            <!-- Top Classes Chart -->
+            <div class="col-md-6 mb-3">
+                <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
+                    <h3 class="text-center">Top Classes by Attendance</h3>
+                    <canvas id="classChart"></canvas>
+                </div>
             </div>
+    
+            <div class="col-md-6 mb-3">
+              <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
+                  <h3 class="text-center">Top Classes by Attendance</h3>
+                  <canvas id="chartMonthly"></canvas>
+              </div>
+          </div>
         </div>
+    
+    
     </div>
 
+    </div>
+      
+    <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+      ...
+    </div>
 
-</div>
+    <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+      ...
+    </div>
+    </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -153,5 +202,33 @@
             }
         }
     });
+
+    const monthlyChart = document.getElementById('chartMonthly').getContext('2d');
+    new Chart(monthlyChart, {
+      type: 'line',
+      data: {
+            labels: classNames,
+            datasets: [{
+                data: classCounts,
+                backgroundColor: randomColor(classNames.length),
+                borderWidth: 1
+            }]
+        },
+      options: {
+        plugins: {
+          filler: {
+            propagate: false,
+          },
+          title: {
+            display: true,
+            text: (ctx) => 'Fill: ' + ctx.chart.data.datasets[0].fill
+          }
+        },
+        interaction: {
+          intersect: false,
+        }
+      },
+    })
+    
 </script>
 {% endblock %}
