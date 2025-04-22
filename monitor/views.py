@@ -12,90 +12,222 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
+from django.urls import reverse
 
-#------------------------------------------------------------------------
-#Visualization
-#-----------------------------------------------------------------------
-loginUser = None
+# ------------------------------------------------------------------------
+# CSV Export
+# ------------------------------------------------------------------------
+
+import csv
+from django.http import HttpResponse
+from django.utils import timezone
+
+def export_checkins(request):
+    # create response for csv download
+    response = HttpResponse(content_type='text/csv')
+    
+    # set filename with timestamp
+    current_time = timezone.now().strftime('%Y-%m-%d')
+    response['Content-Disposition'] = f'attachment; filename="checkins_{current_time}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Check-in ID', 
+        'Student Name', 
+        'Class', 
+        'Check-in Time', 
+        'Check-out Time', 
+        'Duration (hours)'
+    ])
+    
+    # get completed check-ins
+    checkins = Checkin.objects.filter(checkout_time__isnull=False).all()
+    
+    # write data rows
+    for checkin in checkins:
+        # calculate duration in hours
+        if checkin.checkin_time and checkin.checkout_time:
+            duration = (checkin.checkout_time - checkin.checkin_time).total_seconds() / 3600
+        else:
+            duration = 0
+        
+        # get class identifier (handle different model structures)
+        try:
+            # first try to get id directly
+            class_identifier = f"Class #{checkin.class_field.id}"
+        except AttributeError:
+            try:
+                # try using pk if id doesn't exist
+                class_identifier = f"Class #{checkin.class_field.pk}"
+            except AttributeError:
+                # fallback to using the class object string representation
+                class_identifier = f"Class #{checkin.class_field}"
+            
+        # write row for each checkin
+        writer.writerow([
+            checkin.checkin_id,
+            f"{checkin.student.fname} {checkin.student.lname}",
+            class_identifier,
+            checkin.checkin_time,
+            checkin.checkout_time,
+            f"{duration:.2f}"  # format to 2 decimal places
+        ])
+    
+    return response
+
+# ------------------------------------------------------------------------
+# Visualization better comments
+# ------------------------------------------------------------------------
 
 from django.db.models import Count, F, Avg
 from django.db.models.functions import TruncDate, ExtractWeekDay, Concat
 from django.db.models.expressions import Value
 from django.db.models.fields import CharField
 from datetime import datetime, timedelta
+from .forms import ReviewForm
+from django.utils.timezone import now
+
+def thank_you(request):
+    return render(request, 'thank_you.html')
+
+def leave_review(request):
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+
+        if form.is_valid():
+
+            review = form.save()
+            print(f"Review saved: {review}")
+
+            tutor_review = TutorReviews.objects.create(
+                tutor= review.tutor,
+                review=review,
+                date_of_review=now()
+            )
+
+            print(f"TutorReview saved: {tutor_review}")
+            print(f"Redirecting to: monitor:index")
+            print(f"Form data: {form.cleaned_data}")
+
+            # return redirect('monitor:index')
+
+            print(f"Saved Review ID: {review.review_id}")
+            print(f"Tutor FK: {review.tutor}")
+            print(f"Rating: {review.rating}")
+
+
+
+
+            return redirect('monitor:thank_you')  # or to a 'thank you' page
+        
+        else:
+            print(f"Form errors: {form.errors}")
+            print(f"Form is not valid.")
+
+    else:
+        form = ReviewForm()
+
+    return render(request, 'monitor/review_form.html', {'form': form})
+
+
+def submit_review(request):
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.user = request.user
+            review.save()
+            
+            print(f"Review saved: {review}")
+            
+            # Add a success message
+            # messages.success(request, 'Your review has been submitted successfully!')
+            
+            # return render(request, 'success.html', {'form': ReviewForm(), 'message': 'Review submitted successfully!'})
+            
+            return redirect('thank_you.html')
+            
+            # return redirect('review_success')  # Redirect to success page
+    else:
+        form = ReviewForm()
+
+    return render(request, 'success.html', {'form': form})
+
 
 def visualize(request):
-    if loginUser is not None:
-        # Get all completed check-ins
-        data = Checkin.objects.filter(checkout_time__isnull=False).all()
-        
-        # Prepare data for daily check-ins chart
-        # Group by day of week (1=Sunday, 7=Saturday in Django's ExtractWeekDay)
-        daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(weekday=ExtractWeekDay('checkin_time'))\
-            .values('weekday')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('weekday')
-        
-        # Create daily checkins data for Chart.js
-        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        daily_data = [0] * 7  # Initialize with zeros
-        
-        for entry in daily_checkins:
-            # ExtractWeekDay returns 1-7 (Sunday-Saturday), we need to convert to 0-6 (Monday-Sunday)
-            day_index = entry['weekday'] % 7 - 1
-            if day_index == -1:  # Handle Sunday (7 becomes 6)
-                day_index = 6
-            daily_data[day_index] = entry['count']
-        
-        # Get top classes by check-ins - using the class_id field from the model
-        # If your Class model has a name field, update this query accordingly
-        top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
-            .values('class_field')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('-count')[:5]
-        
-        class_names = [f"Class #{c['class_field']}" for c in top_classes]  # Using ID as name
-        class_counts = [c['count'] for c in top_classes]
-        
-        # Get top students by check-ins - using fname and lname fields
-        top_students = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', output_field=CharField()))\
-            .values('full_name', 'student')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('-count')[:5]
-        
-        student_names = [s['full_name'] for s in top_students]
-        student_counts = [s['count'] for s in top_students]
-        
-        # Average duration of check-ins
-        avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(date=TruncDate('checkin_time'),
-                        duration=F('checkout_time') - F('checkin_time'))\
-            .values('date')\
-            .annotate(avg_duration=Avg('duration'))\
-            .order_by('date')
-        
-        duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-        duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]  # Convert to hours
-        
-        context = {
-            'data': data,
-            'daily_data': json.dumps(daily_data),
-            'weekdays': json.dumps(weekdays),
-            'class_names': json.dumps(class_names),
-            'class_counts': json.dumps(class_counts),
-            'student_names': json.dumps(student_names),
-            'student_counts': json.dumps(student_counts),
-            'duration_dates': json.dumps(duration_dates),
-            'duration_hours': json.dumps(duration_hours),
-            'tablist': ['Today','Weekly','Monthly','Semester','Tools']
-        }
-        
-        return render(request, 'monitor/visualize.html', context)
-    else:
-        return render(request, 'monitor/admin_login.html')
-
+    # get completed check-ins only
+    data = Checkin.objects.filter(checkout_time__isnull=False).all()
+    
+    # --- daily check-ins chart data ---
+    daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
+        .annotate(weekday=ExtractWeekDay('checkin_time'))\
+        .values('weekday')\
+        .annotate(count=Count('checkin_id'))\
+        .order_by('weekday')
+    
+    # prepare weekday labels and initialize data array
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    daily_data = [0] * 7  # zero placeholder for each day
+    
+    # map database results to correct weekday position
+    for entry in daily_checkins:
+        # convert django's 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
+        day_index = entry['weekday'] % 7 - 1
+        if day_index == -1:  # handle sunday
+            day_index = 6
+        daily_data[day_index] = entry['count']
+    
+    # --- top classes chart data ---
+    top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
+        .values('class_field')\
+        .annotate(count=Count('checkin_id'))\
+        .order_by('-count')[:5]
+    
+    # prepare class names and counts for charts
+    class_names = [f"Class #{c['class_field']}" for c in top_classes]
+    class_counts = [c['count'] for c in top_classes]
+    
+    # --- top students chart data ---
+    top_students = Checkin.objects.filter(checkout_time__isnull=False)\
+        .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', 
+                                   output_field=CharField()))\
+        .values('full_name', 'student')\
+        .annotate(count=Count('checkin_id'))\
+        .order_by('-count')[:5]
+    
+    # prepare student names and counts for charts
+    student_names = [s['full_name'] for s in top_students]
+    student_counts = [s['count'] for s in top_students]
+    
+    # --- average duration chart data ---
+    avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
+        .annotate(date=TruncDate('checkin_time'),
+                    duration=F('checkout_time') - F('checkin_time'))\
+        .values('date')\
+        .annotate(avg_duration=Avg('duration'))\
+        .order_by('date')
+    
+    # prepare duration dates and hours for charts
+    duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
+    duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
+    
+    # build context with all chart data
+    context = {
+        'data': data,
+        'daily_data': json.dumps(daily_data),
+        'weekdays': json.dumps(weekdays),
+        'class_names': json.dumps(class_names),
+        'class_counts': json.dumps(class_counts),
+        'student_names': json.dumps(student_names),
+        'student_counts': json.dumps(student_counts),
+        'duration_dates': json.dumps(duration_dates),
+        'duration_hours': json.dumps(duration_hours),
+        'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
+    }
+    
+    return render(request, 'monitor/visualize.html', context)
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
 #------------------------------------------------------------------------
@@ -225,6 +357,9 @@ def success(request):
 
 def class_check(request):
     # student_name = request.session.get('student_name')
+
+    checkout_status = False 
+
     student_id = request.session.get('student_id')
     print(str(student_id))
     student = Students.objects.get(student_id=student_id)
@@ -257,8 +392,12 @@ def class_check(request):
                     student=student,
                     class_field=class_obj
                 )
+                if request.session.get("student_name") != None:
+                    name = request.session.get("student_name")
+                else:
+                    name = "Student"
 
-                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {request.session.get("student_name")}!')
+                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {name}!')
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -277,7 +416,10 @@ def class_check(request):
 
                 messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}, {request.session.get("student_name")}!')
                 messages.info(request, 'Leave a review of your experience?')
-                return redirect('monitor:success')
+
+                checkout_status = True #adding flag so that we can only display leave a review on checkout page
+
+                return redirect(reverse('monitor:review_success') + '?checkout_status=True')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
                 print("Student signed in!")
@@ -316,7 +458,8 @@ def class_check(request):
             'signed_in': signed_in,
             'student': student,
             'classes': student_classes,
-            'student_name': request.session.get('student_name', '')
+            'student_name': request.session.get('student_name', ''),
+            'checkout_status':checkout_status
     }
     # if not student_id:
     #     return redirect('index')
@@ -455,7 +598,7 @@ def class_select(request):
 
     name = request.session.get('student_name')
     if name == None:
-        name = ""
+        name = "Student"
 
 
     array = []
