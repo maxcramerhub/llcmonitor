@@ -33,32 +33,34 @@
 
 </style>
 
-<div class="card p-2 m-4 shadow-lg">
+<div class="card p-2 m-4 shadow-lg text-center">
     <div class="card-body">
         <form method="POST" action="{% url 'monitor:leave_review' %}">
             {% csrf_token %}
+            
             <div class="mb-3">
-                {{ form.tutor.label_tag }}
-                {{ form.tutor }}
-            </div>
-            <div class="mb-3">
-                <label for="written_review" class="form-label fs-3">Your Review:</label><br>
+                <label for="written_review" class="form-label fs-3 text-center">Your Review:</label><br>
+                <div class="mb-3">
+                    <div id="star-rating" class="star-rating center mb-3">
+                        <button type="button" class="btn btn-outline-warning star shadow-sm" data-value="1">&#9733;</button>
+                        <button type="button" class="btn btn-outline-warning star shadow-sm" data-value="2">&#9733;</button>
+                        <button type="button" class="btn btn-outline-warning star shadow-sm" data-value="3">&#9733;</button>
+                        <button type="button" class="btn btn-outline-warning star shadow-sm" data-value="4">&#9733;</button>
+                        <button type="button" class="btn btn-outline-warning star shadow-sm" data-value="5">&#9733;</button>
+                    </div>
+                    <p class="text-center">Your rating: <span id="rating-value">0</span> stars</p>
+                    {{ form.rating }}
+                </div>
+                <p>Comments:</p>
                 {{ form.written_review }}
             </div>
         
             <div class="mb-3">
-                <label for="rating" class="form-label fs-3">Rating:</label><br>
-                <div id="star-rating" class="star-rating">
-                    <button type="button" class="btn btn-outline-warning star" data-value="1">&#9733;</button>
-                    <button type="button" class="btn btn-outline-warning star" data-value="2">&#9733;</button>
-                    <button type="button" class="btn btn-outline-warning star" data-value="3">&#9733;</button>
-                    <button type="button" class="btn btn-outline-warning star" data-value="4">&#9733;</button>
-                    <button type="button" class="btn btn-outline-warning star" data-value="5">&#9733;</button>
-                </div>
-                <p>Your rating: <span id="rating-value">0</span> stars</p>
-                {{ form.rating }}
+                <p>{{ form.tutor.label_tag }}</p>
+                {{ form.tutor }}
             </div>
-            <button type="submit" class="btn btn-primary w-100 shadow-sm">Submit Review</button>
+            <p><i>*This review will anonymous</i></p>
+            <button type="submit" class="btn btn-primary w-100 shadow-sm p-4">Submit Review</button>
         </form>
     </div>
 </div>
