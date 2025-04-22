@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Leave a Review{% endblock %}
+
+
+
+{% block content %}
+<div class="bg-image-container"></div>
+<div class="container mt-4 text-center">
+    <div class="row">
+        <div class="col">
+            <img src="{% static 'westernlogo.png' %}" alt="LLC Logo" class="img-fluid mb-2" style="max-height: 120px;">
+            <img src="{% static 'llclogo.png' %}" alt="LLC Logo" class="img-fluid mb-2" style="max-height: 120px;">
+            <h1 style="color:white">Leave a Review</h1>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-image-container {
+        position: fixed;
+        width: 100%;
+        height: 60%;
+        z-index: -1;
+        background-image: url('{% static "heroimage.png" %}');
+        background-size: cover;
+        background-position: center;
+        filter: blur(4px);
+    }
+    
+
+</style>
+
+<div class="card p-2 m-4 shadow-lg">
+    <div class="card-body">
+        <form method="POST" action="{% url 'monitor:leave_review' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                {{ form.tutor.label_tag }}
+                {{ form.tutor }}
+            </div>
+            <div class="mb-3">
+                <label for="written_review" class="form-label fs-3">Your Review:</label><br>
+                {{ form.written_review }}
+            </div>
+        
+            <div class="mb-3">
+                <label for="rating" class="form-label fs-3">Rating:</label><br>
+                <div id="star-rating" class="star-rating">
+                    <button type="button" class="btn btn-outline-warning star" data-value="1">&#9733;</button>
+                    <button type="button" class="btn btn-outline-warning star" data-value="2">&#9733;</button>
+                    <button type="button" class="btn btn-outline-warning star" data-value="3">&#9733;</button>
+                    <button type="button" class="btn btn-outline-warning star" data-value="4">&#9733;</button>
+                    <button type="button" class="btn btn-outline-warning star" data-value="5">&#9733;</button>
+                </div>
+                <p>Your rating: <span id="rating-value">0</span> stars</p>
+                {{ form.rating }}
+            </div>
+            <button type="submit" class="btn btn-primary w-100 shadow-sm">Submit Review</button>
+        </form>
+    </div>
+</div>
+
+
+{% endblock %}
