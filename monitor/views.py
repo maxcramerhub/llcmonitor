@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
+from django.urls import reverse
 
 #------------------------------------------------------------------------
 #Visualization
@@ -23,6 +24,77 @@ from django.db.models.functions import TruncDate, ExtractWeekDay, Concat
 from django.db.models.expressions import Value
 from django.db.models.fields import CharField
 from datetime import datetime, timedelta
+from .forms import ReviewForm
+from django.utils.timezone import now
+
+def thank_you(request):
+    return render(request, 'thank_you.html')
+
+def leave_review(request):
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+
+        if form.is_valid():
+
+            review = form.save()
+            print(f"Review saved: {review}")
+
+            tutor_review = TutorReviews.objects.create(
+                tutor= review.tutor,
+                review=review,
+                date_of_review=now()
+            )
+
+            print(f"TutorReview saved: {tutor_review}")
+            print(f"Redirecting to: monitor:index")
+            print(f"Form data: {form.cleaned_data}")
+
+            # return redirect('monitor:index')
+
+            print(f"Saved Review ID: {review.review_id}")
+            print(f"Tutor FK: {review.tutor}")
+            print(f"Rating: {review.rating}")
+
+
+
+
+            return redirect('monitor:thank_you')  # or to a 'thank you' page
+        
+        else:
+            print(f"Form errors: {form.errors}")
+            print(f"Form is not valid.")
+
+    else:
+        form = ReviewForm()
+
+    return render(request, 'monitor/review_form.html', {'form': form})
+
+
+def submit_review(request):
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.user = request.user
+            review.save()
+            
+            print(f"Review saved: {review}")
+            
+            # Add a success message
+            # messages.success(request, 'Your review has been submitted successfully!')
+            
+            # return render(request, 'success.html', {'form': ReviewForm(), 'message': 'Review submitted successfully!'})
+            
+            return redirect('thank_you.html')
+            
+            # return redirect('review_success')  # Redirect to success page
+    else:
+        form = ReviewForm()
+
+    return render(request, 'success.html', {'form': form})
+
 
 def visualize(request):
     # Get all completed check-ins
@@ -219,6 +291,9 @@ def success(request):
 
 def class_check(request):
     # student_name = request.session.get('student_name')
+
+    checkout_status = False 
+
     student_id = request.session.get('student_id')
     print(str(student_id))
     student = Students.objects.get(student_id=student_id)
@@ -271,7 +346,10 @@ def class_check(request):
 
                 messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}, {request.session.get("student_name")}!')
                 messages.info(request, 'Leave a review of your experience?')
-                return redirect('monitor:success')
+
+                checkout_status = True #adding flag so that we can only display leave a review on checkout page
+
+                return redirect(reverse('monitor:review_success') + '?checkout_status=True')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
             
                 print("Student signed in!")
@@ -310,7 +388,8 @@ def class_check(request):
             'signed_in': signed_in,
             'student': student,
             'classes': student_classes,
-            'student_name': request.session.get('student_name', '')
+            'student_name': request.session.get('student_name', ''),
+            'checkout_status':checkout_status
     }
     # if not student_id:
     #     return redirect('index')

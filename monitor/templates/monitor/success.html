@@ -6,17 +6,28 @@
 
 <!-- dynamic success page with interval -->
 <div class="container mt-5 text-center">
-    <div class="alert alert-info">
+    <div class="alert alert-info position-relative" style="z-index: 1;"> <!-- added position relative and z index for layout -->
     {% for message in messages %}
         {% if message.tags == 'success' %}
             <h1 id="random"></h1>
-            <h1>{{ message }}<h1>
+            <h1>{{ message }}</h1>
         {% else %}
             <h2>{{ message }}</h2>
         {% endif %}
     {% endfor %}
     </div>  
 </div>
+
+
+<div class="container mt-4 position-relative" style="z-index: 2;">
+    {% if request.GET.checkout_status %}
+    <h2>Would you like to leave a review?</h2>
+    <a href="{% url 'monitor:leave_review' %}" class="btn btn-success me-2">Yes</a>
+    <a href="{% url 'monitor:index' %}" class="btn btn-secondary">No</a>
+    {% endif %}
+</div>
+
+
 
 <script>
     // for fun :)
@@ -34,7 +45,7 @@
     item.innerHTML = `<i class="${selectedIcon}"></i>`;
 
 
-    let timeLeft = 3;
+    let timeLeft = 6;
     
     const countdown = setInterval(function() {
         timeLeft--;
@@ -45,4 +56,13 @@
         }
     }, 1000);
 </script>
+
+{% if confetti %}
+    <script>
+        // Launch the confetti effect if confetti is True
+        launchConfetti();
+    </script>
+{% endif %}
+
+
 {% endblock %}

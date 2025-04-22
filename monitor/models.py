@@ -80,7 +80,12 @@ class Tutor(models.Model):
 class Reviews(models.Model):
     review_id = models.AutoField(primary_key=True)
     written_review = models.TextField()
-    tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE, related_name='reviews')
+    tutor = models.ForeignKey(Tutor, 
+    on_delete=models.CASCADE, 
+    related_name='reviews',
+    null=True, #make it so we can allow null value for tutor 
+    blank=True)
+    rating = models.IntegerField(null=True, blank=True)
 
     class Meta:
         managed = True
@@ -100,7 +105,7 @@ class Schedule(models.Model):
         db_table = 'Schedule'
 
 class TutorReviews(models.Model):
-    tutor = models.OneToOneField(Tutor, on_delete=models.CASCADE)
+    tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE)
     review = models.ForeignKey(Reviews, on_delete=models.CASCADE)
     date_of_review = models.DateTimeField(blank=True, null=True)
 
