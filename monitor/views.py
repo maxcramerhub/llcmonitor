@@ -68,8 +68,8 @@ def export_checkins(request):
             checkin.checkin_id,
             f"{checkin.student.fname} {checkin.student.lname}",
             class_identifier,
-            checkin.checkin_time,
-            checkin.checkout_time,
+            checkin.checkin_time.astimezone('America/Denver'),
+            checkin.checkout_time.astimezone('America/Denver'),
             f"{duration:.2f}"  # format to 2 decimal places
         ])
     
@@ -157,77 +157,80 @@ def submit_review(request):
 
 
 def visualize(request):
-    # get completed check-ins only
-    data = Checkin.objects.filter(checkout_time__isnull=False).all()
-    
-    # --- daily check-ins chart data ---
-    daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(weekday=ExtractWeekDay('checkin_time'))\
-        .values('weekday')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('weekday')
-    
-    # prepare weekday labels and initialize data array
-    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    daily_data = [0] * 7  # zero placeholder for each day
-    
-    # map database results to correct weekday position
-    for entry in daily_checkins:
-        # convert django's 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
-        day_index = entry['weekday'] % 7 - 1
-        if day_index == -1:  # handle sunday
-            day_index = 6
-        daily_data[day_index] = entry['count']
-    
-    # --- top classes chart data ---
-    top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
-        .values('class_field')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('-count')[:5]
-    
-    # prepare class names and counts for charts
-    class_names = [f"Class #{c['class_field']}" for c in top_classes]
-    class_counts = [c['count'] for c in top_classes]
-    
-    # --- top students chart data ---
-    top_students = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', 
-                                   output_field=CharField()))\
-        .values('full_name', 'student')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('-count')[:5]
-    
-    # prepare student names and counts for charts
-    student_names = [s['full_name'] for s in top_students]
-    student_counts = [s['count'] for s in top_students]
-    
-    # --- average duration chart data ---
-    avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(date=TruncDate('checkin_time'),
-                    duration=F('checkout_time') - F('checkin_time'))\
-        .values('date')\
-        .annotate(avg_duration=Avg('duration'))\
-        .order_by('date')
-    
-    # prepare duration dates and hours for charts
-    duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-    duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
-    
-    # build context with all chart data
-    context = {
-        'data': data,
-        'daily_data': json.dumps(daily_data),
-        'weekdays': json.dumps(weekdays),
-        'class_names': json.dumps(class_names),
-        'class_counts': json.dumps(class_counts),
-        'student_names': json.dumps(student_names),
-        'student_counts': json.dumps(student_counts),
-        'duration_dates': json.dumps(duration_dates),
-        'duration_hours': json.dumps(duration_hours),
-        'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
-    }
-    
-    return render(request, 'monitor/visualize.html', context)
+    if loginUser:
+        # get completed check-ins only
+        data = Checkin.objects.filter(checkout_time__isnull=False).all()
+        
+        # --- daily check-ins chart data ---
+        daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(weekday=ExtractWeekDay('checkin_time'))\
+            .values('weekday')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('weekday')
+        
+        # prepare weekday labels and initialize data array
+        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        daily_data = [0] * 7  # zero placeholder for each day
+        
+        # map database results to correct weekday position
+        for entry in daily_checkins:
+            # convert django's 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
+            day_index = entry['weekday'] % 7 - 1
+            if day_index == -1:  # handle sunday
+                day_index = 6
+            daily_data[day_index] = entry['count']
+        
+        # --- top classes chart data ---
+        top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
+            .values('class_field')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('-count')[:5]
+        
+        # prepare class names and counts for charts
+        class_names = [f"Class #{c['class_field']}" for c in top_classes]
+        class_counts = [c['count'] for c in top_classes]
+        
+        # --- top students chart data ---
+        top_students = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', 
+                                    output_field=CharField()))\
+            .values('full_name', 'student')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('-count')[:5]
+        
+        # prepare student names and counts for charts
+        student_names = [s['full_name'] for s in top_students]
+        student_counts = [s['count'] for s in top_students]
+        
+        # --- average duration chart data ---
+        avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(date=TruncDate('checkin_time'),
+                        duration=F('checkout_time') - F('checkin_time'))\
+            .values('date')\
+            .annotate(avg_duration=Avg('duration'))\
+            .order_by('date')
+        
+        # prepare duration dates and hours for charts
+        duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
+        duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
+        
+        # build context with all chart data
+        context = {
+            'data': data,
+            'daily_data': json.dumps(daily_data),
+            'weekdays': json.dumps(weekdays),
+            'class_names': json.dumps(class_names),
+            'class_counts': json.dumps(class_counts),
+            'student_names': json.dumps(student_names),
+            'student_counts': json.dumps(student_counts),
+            'duration_dates': json.dumps(duration_dates),
+            'duration_hours': json.dumps(duration_hours),
+            'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
+        }
+        
+        return render(request, 'monitor/visualize.html', context)
+    else:
+        return render(request, 'monitor/admin_login.html')
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
 #------------------------------------------------------------------------
