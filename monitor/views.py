@@ -13,61 +13,124 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 
-#------------------------------------------------------------------------
-#Visualization
-#-----------------------------------------------------------------------
+# ------------------------------------------------------------------------
+# CSV Export
+# ------------------------------------------------------------------------
 
+import csv
+from django.http import HttpResponse
+from django.utils import timezone
+
+def export_checkins(request):
+    # create response for csv download
+    response = HttpResponse(content_type='text/csv')
+    
+    # set filename with timestamp
+    current_time = timezone.now().strftime('%Y-%m-%d')
+    response['Content-Disposition'] = f'attachment; filename="checkins_{current_time}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Check-in ID', 
+        'Student Name', 
+        'Class', 
+        'Check-in Time', 
+        'Check-out Time', 
+        'Duration (hours)'
+    ])
+    
+    # get completed check-ins
+    checkins = Checkin.objects.filter(checkout_time__isnull=False).all()
+    
+    # write data rows
+    for checkin in checkins:
+        # calculate duration in hours
+        if checkin.checkin_time and checkin.checkout_time:
+            duration = (checkin.checkout_time - checkin.checkin_time).total_seconds() / 3600
+        else:
+            duration = 0
+        
+        # get class identifier (handle different model structures)
+        try:
+            # first try to get id directly
+            class_identifier = f"Class #{checkin.class_field.id}"
+        except AttributeError:
+            try:
+                # try using pk if id doesn't exist
+                class_identifier = f"Class #{checkin.class_field.pk}"
+            except AttributeError:
+                # fallback to using the class object string representation
+                class_identifier = f"Class #{checkin.class_field}"
+            
+        # write row for each checkin
+        writer.writerow([
+            checkin.checkin_id,
+            f"{checkin.student.fname} {checkin.student.lname}",
+            class_identifier,
+            checkin.checkin_time,
+            checkin.checkout_time,
+            f"{duration:.2f}"  # format to 2 decimal places
+        ])
+    
+    return response
+
+# ------------------------------------------------------------------------
+# Visualization better comments
+# ------------------------------------------------------------------------
 
 from django.db.models import Count, F, Avg
 from django.db.models.functions import TruncDate, ExtractWeekDay, Concat
 from django.db.models.expressions import Value
 from django.db.models.fields import CharField
 from datetime import datetime, timedelta
+import json
 
 def visualize(request):
-    # Get all completed check-ins
+    # get completed check-ins only
     data = Checkin.objects.filter(checkout_time__isnull=False).all()
     
-    # Prepare data for daily check-ins chart
-    # Group by day of week (1=Sunday, 7=Saturday in Django's ExtractWeekDay)
+    # --- daily check-ins chart data ---
     daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
         .annotate(weekday=ExtractWeekDay('checkin_time'))\
         .values('weekday')\
         .annotate(count=Count('checkin_id'))\
         .order_by('weekday')
     
-    # Create daily checkins data for Chart.js
+    # prepare weekday labels and initialize data array
     weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    daily_data = [0] * 7  # Initialize with zeros
+    daily_data = [0] * 7  # zero placeholder for each day
     
+    # map database results to correct weekday position
     for entry in daily_checkins:
-        # ExtractWeekDay returns 1-7 (Sunday-Saturday), we need to convert to 0-6 (Monday-Sunday)
+        # convert django's 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
         day_index = entry['weekday'] % 7 - 1
-        if day_index == -1:  # Handle Sunday (7 becomes 6)
+        if day_index == -1:  # handle sunday
             day_index = 6
         daily_data[day_index] = entry['count']
     
-    # Get top classes by check-ins - using the class_id field from the model
-    # If your Class model has a name field, update this query accordingly
+    # --- top classes chart data ---
     top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
         .values('class_field')\
         .annotate(count=Count('checkin_id'))\
         .order_by('-count')[:5]
     
-    class_names = [f"Class #{c['class_field']}" for c in top_classes]  # Using ID as name
+    # prepare class names and counts for charts
+    class_names = [f"Class #{c['class_field']}" for c in top_classes]
     class_counts = [c['count'] for c in top_classes]
     
-    # Get top students by check-ins - using fname and lname fields
+    # --- top students chart data ---
     top_students = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', output_field=CharField()))\
+        .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', 
+                                   output_field=CharField()))\
         .values('full_name', 'student')\
         .annotate(count=Count('checkin_id'))\
         .order_by('-count')[:5]
     
+    # prepare student names and counts for charts
     student_names = [s['full_name'] for s in top_students]
     student_counts = [s['count'] for s in top_students]
     
-    # Average duration of check-ins
+    # --- average duration chart data ---
     avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
         .annotate(date=TruncDate('checkin_time'),
                  duration=F('checkout_time') - F('checkin_time'))\
@@ -75,9 +138,11 @@ def visualize(request):
         .annotate(avg_duration=Avg('duration'))\
         .order_by('date')
     
+    # prepare duration dates and hours for charts
     duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-    duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]  # Convert to hours
+    duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
     
+    # build context with all chart data
     context = {
         'data': data,
         'daily_data': json.dumps(daily_data),
@@ -88,12 +153,10 @@ def visualize(request):
         'student_counts': json.dumps(student_counts),
         'duration_dates': json.dumps(duration_dates),
         'duration_hours': json.dumps(duration_hours),
-        'tablist': ['Today','Weekly','Monthly','Semester','Tools']
+        'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
     }
     
     return render(request, 'monitor/visualize.html', context)
-
-
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
 #------------------------------------------------------------------------

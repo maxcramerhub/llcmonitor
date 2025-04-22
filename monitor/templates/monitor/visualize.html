@@ -3,232 +3,244 @@
 {% block title %}Visualize Check Ins{% endblock %}
 
 {% block content %}
-
-<ul style="background-color: #6f1a29!important;" class="nav justify-content-end">
-    <a class="nav-link btn btn-outline-danger p-2 m-2" href="#" tabindex="-1" aria-disabled="true">Sign Out</a>
+<!-- navigation bar -->
+<ul class="nav justify-content-end" style="background-color: #6f1a29!important;">
+  <li class="nav-item">
+    <a class="nav-link btn btn-outline-light p-2 m-2" href="#" tabindex="-1" aria-disabled="true">Sign Out</a>
   </li>
 </ul>
 
 <div class="container-fluid mt-4">
-
-
-
-    <ul class="nav nav-tabs" id="myTab" role="tablist">
-        {% for tab in tablist %}
-          <li class="nav-item text-white" role="presentation">
-            <button class="nav-link {% if forloop.first %}active{% endif %} p-4" 
-                    id="{{ tab }}-tab" 
-                    data-bs-toggle="tab" 
-                    data-bs-target="#{{ tab }}" 
-                    type="button" 
-                    role="tab" 
-                    aria-controls="{{ tab }}" 
-                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
-              {{ tab }}
-            </button>
-          </li>
-        {% endfor %}
-      </ul>
-    </ul>
-
-    <div class="tab-content" id="myTabContent">
-
-        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">    <div class="row mb-4">
-          <div class="col">
-              <h3 class="text-center mt-4" style="color:whitesmoke">Today</h3>
-          </div>
-        </div>
-
-        <hr style="border-top: 8px solid #bbb;
-      border-radius: 5px;" class="rounded">
-
-        <div class="row">
-          <div class="col mb-0">
-              <div style="background-color: white; padding: 20px; border-radius: 20px;" class="shadow-lg mb-5">
-                  <div class="table-responsive">
-                      <table class="table table-striped">
-                          <thead class="thead-dark">
-                              <tr>
-                                  <th>Check In Time</th>
-                                  <th>Check Out Time</th>
-                                  <th>Duration (hrs)</th>
-                                  <th>Student</th>
-                                  <th>Class</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {% for checkin in data %}
-                              <tr>
-                                  <td>{{ checkin.checkin_time }}</td>
-                                  <td>{{ checkin.checkout_time }}</td>
-                                  <td>
-                                    {% if checkin.checkin_time and checkin.checkout_time %}
-                                        {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
-                                    {% else %}
-                                        none
-                                    {% endif %}
-                                  </td>
-                                  <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
-                                  <td>Class #{{ checkin.class_field.id }}</td>
-                              </tr>
-                              {% endfor %}
-                          </tbody>
-                      </table>
-                  </div>
-                  <button class="btn btn-primary">Export Check-Ins</button>
-              </div>
-          </div>
+  <!-- header with dropdown -->
+  <div class="row mb-4">
+    <div class="col d-flex justify-content-center align-items-center">
+      <h1 class="me-3" style="color:whitesmoke">Today</h1>
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          Change View
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
+          {% for option in tablist %}
+            <li><a class="dropdown-item" href="#" data-timeframe="{{ option }}">{{ option }}</a></li>
+          {% endfor %}
+        </ul>
       </div>
-    
-        <div class="row">
-            <!-- Daily Check-ins Chart -->
-            <div class="col-md-6 mb-3">
-                <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
-                    <h3 class="text-center">Daily Check-ins</h3>
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </div>
-    
-            <!-- Top Classes Chart -->
-            <div class="col-md-6 mb-3">
-                <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
-                    <h3 class="text-center">Top Classes by Attendance</h3>
-                    <canvas id="classChart"></canvas>
-                </div>
-            </div>
-    
-            <div class="col-md-6 mb-3">
-              <div style="background-color: whitesmoke; padding: 20px; border-radius: 20px;" class="shadow-lg">
-                  <h3 class="text-center">Top Classes by Attendance</h3>
-                  <canvas id="chartMonthly"></canvas>
-              </div>
+    </div>
+  </div>
+
+  <hr style="border-top: 8px solid #bbb; border-radius: 5px;" class="rounded">
+
+  <!-- main content container -->
+  <div id="contentContainer">
+    <!-- check-ins table section -->
+    <div class="row">
+      <div class="col mb-0">
+        <div class="shadow-lg mb-5" style="background-color: white; padding: 20px; border-radius: 20px;">
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead class="thead-dark">
+                <tr>
+                  <th>Check In Time</th>
+                  <th>Check Out Time</th>
+                  <th>Duration (hrs)</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for checkin in data %}
+                <tr>
+                  <td>{{ checkin.checkin_time }}</td>
+                  <td>{{ checkin.checkout_time }}</td>
+                  <td>
+                    {% if checkin.checkin_time and checkin.checkout_time %}
+                      {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
+                    {% else %}
+                      none
+                    {% endif %}
+                  </td>
+                  <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
+                  <td>Class #{{ checkin.class_field.id }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
+          <a href="export/" class="btn btn-primary">Export Check-Ins</a>
         </div>
-    
-    
+      </div>
     </div>
+  
+    <!-- charts row -->
+    <div class="row">
+      <!-- daily check-ins chart -->
+      <div class="col-md-6 mb-3">
+        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
+          <h3 class="text-center">Daily Check-ins</h3>
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </div>
+  
+      <!-- top classes chart -->
+      <div class="col-md-6 mb-3">
+        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
+          <h3 class="text-center">Top Classes by Attendance</h3>
+          <canvas id="classChart"></canvas>
+        </div>
+      </div>
+  
+      <!-- monthly chart -->
+      <div class="col-md-6 mb-3">
+        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
+          <h3 class="text-center">Average Duration</h3>
+          <canvas id="chartMonthly"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    </div>
-      
-    <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
-      ...
-    </div>
-
-    <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
-      ...
-    </div>
-    </div>
-
+<!-- chart.js library -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    //parse data into JSON to be used based on context.
-    const dailyData = JSON.parse('{{ daily_data|safe }}');
-    const weekdays = JSON.parse('{{ weekdays|safe }}');
-    const classNames = JSON.parse('{{ class_names|safe }}');
-    const classCounts = JSON.parse('{{ class_counts|safe }}');
-    const studentNames = JSON.parse('{{ student_names|safe }}');
-    const studentCounts = JSON.parse('{{ student_counts|safe }}');
-    const durationDates = JSON.parse('{{ duration_dates|safe }}');
-    const durationHours = JSON.parse('{{ duration_hours|safe }}');
+  // parse data from django context
+  const dailyData = JSON.parse('{{ daily_data|safe }}');
+  const weekdays = JSON.parse('{{ weekdays|safe }}');
+  const classNames = JSON.parse('{{ class_names|safe }}');
+  const classCounts = JSON.parse('{{ class_counts|safe }}');
+  const studentNames = JSON.parse('{{ student_names|safe }}');
+  const studentCounts = JSON.parse('{{ student_counts|safe }}');
+  const durationDates = JSON.parse('{{ duration_dates|safe }}');
+  const durationHours = JSON.parse('{{ duration_hours|safe }}');
 
-
-    // randome colors for graphs put into an array
-    function randomColor(count) {
-        const colors = [];
-        for (let i = 0; i < count; i++) {
-            const r = Math.floor(Math.random() * 255);
-            const g = Math.floor(Math.random() * 255);
-            const b = Math.floor(Math.random() * 255);
-            colors.push(`rgba(${r}, ${g}, ${b}, 1)`);
-        }
-        return colors;
+  // generate random colors for charts
+  function randomColor(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      const r = Math.floor(Math.random() * 255);
+      const g = Math.floor(Math.random() * 255);
+      const b = Math.floor(Math.random() * 255);
+      colors.push(`rgba(${r}, ${g}, ${b}, 1)`);
     }
+    return colors;
+  }
 
-    //daily checkins
-    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-    new Chart(dailyCtx, {
-        type: 'bar',
-        data: {
-            labels: weekdays,
-            datasets: [{
-                label: 'Number of Check-ins',
-                data: dailyData,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of Check-ins'
-                    }
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Check-ins by Day of Week'
-                }
-            }
-        }
-    });
-
-    //top classes
-    const classCtx = document.getElementById('classChart').getContext('2d');
-    new Chart(classCtx, {
-        type: 'pie',
-        data: {
-            labels: classNames,
-            datasets: [{
-                data: classCounts,
-                backgroundColor: randomColor(classNames.length),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Top Classes by Number of Check-ins'
-                },
-                legend: {
-                    position: 'left'
-                }
-            }
-        }
-    });
-
-    const monthlyChart = document.getElementById('chartMonthly').getContext('2d');
-    new Chart(monthlyChart, {
-      type: 'line',
-      data: {
-            labels: classNames,
-            datasets: [{
-                data: classCounts,
-                backgroundColor: randomColor(classNames.length),
-                borderWidth: 1
-            }]
-        },
-      options: {
-        plugins: {
-          filler: {
-            propagate: false,
-          },
+  // daily check-ins bar chart
+  const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+  new Chart(dailyCtx, {
+    type: 'bar',
+    data: {
+      labels: weekdays,
+      datasets: [{
+        label: 'Number of Check-ins',
+        data: dailyData,
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
           title: {
             display: true,
-            text: (ctx) => 'Fill: ' + ctx.chart.data.datasets[0].fill
+            text: 'Number of Check-ins'
           }
-        },
-        interaction: {
-          intersect: false,
         }
       },
-    })
-    
+      plugins: {
+        title: {
+          display: true,
+          text: 'Check-ins by Day of Week'
+        }
+      }
+    }
+  });
+
+  // top classes pie chart
+  const classCtx = document.getElementById('classChart').getContext('2d');
+  new Chart(classCtx, {
+    type: 'pie',
+    data: {
+      labels: classNames,
+      datasets: [{
+        data: classCounts,
+        backgroundColor: randomColor(classNames.length),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Top Classes by Number of Check-ins'
+        },
+        legend: {
+          position: 'left'
+        }
+      }
+    }
+  });
+
+  // monthly line chart
+  const monthlyChart = document.getElementById('chartMonthly').getContext('2d');
+  new Chart(monthlyChart, {
+    type: 'line',
+    data: {
+      labels: durationDates,
+      datasets: [{
+        label: 'Average Hours',
+        data: durationHours,
+        fill: true,
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1,
+        tension: 0.4
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Hours'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Date'
+          }
+        }
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: 'Average Check-in Duration by Date'
+        }
+      }
+    }
+  });
+
+  // dropdown functionality
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const timeframe = this.getAttribute('data-timeframe');
+      
+      // update the title
+      document.querySelector('h1').textContent = timeframe;
+      
+      // here you would typically load different data based on the timeframe
+      // for demo purposes, we're just updating the title
+      console.log(`Changed to ${timeframe} view`);
+      
+      // you could add AJAX calls here to fetch new data from the server
+      // and update the charts and table
+    });
+  });
 </script>
 {% endblock %}
