@@ -16,7 +16,7 @@ from django.contrib.auth import authenticate, login
 #------------------------------------------------------------------------
 #Visualization
 #-----------------------------------------------------------------------
-
+loginUser = None
 
 from django.db.models import Count, F, Avg
 from django.db.models.functions import TruncDate, ExtractWeekDay, Concat
@@ -25,74 +25,76 @@ from django.db.models.fields import CharField
 from datetime import datetime, timedelta
 
 def visualize(request):
-    # Get all completed check-ins
-    data = Checkin.objects.filter(checkout_time__isnull=False).all()
-    
-    # Prepare data for daily check-ins chart
-    # Group by day of week (1=Sunday, 7=Saturday in Django's ExtractWeekDay)
-    daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(weekday=ExtractWeekDay('checkin_time'))\
-        .values('weekday')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('weekday')
-    
-    # Create daily checkins data for Chart.js
-    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    daily_data = [0] * 7  # Initialize with zeros
-    
-    for entry in daily_checkins:
-        # ExtractWeekDay returns 1-7 (Sunday-Saturday), we need to convert to 0-6 (Monday-Sunday)
-        day_index = entry['weekday'] % 7 - 1
-        if day_index == -1:  # Handle Sunday (7 becomes 6)
-            day_index = 6
-        daily_data[day_index] = entry['count']
-    
-    # Get top classes by check-ins - using the class_id field from the model
-    # If your Class model has a name field, update this query accordingly
-    top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
-        .values('class_field')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('-count')[:5]
-    
-    class_names = [f"Class #{c['class_field']}" for c in top_classes]  # Using ID as name
-    class_counts = [c['count'] for c in top_classes]
-    
-    # Get top students by check-ins - using fname and lname fields
-    top_students = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', output_field=CharField()))\
-        .values('full_name', 'student')\
-        .annotate(count=Count('checkin_id'))\
-        .order_by('-count')[:5]
-    
-    student_names = [s['full_name'] for s in top_students]
-    student_counts = [s['count'] for s in top_students]
-    
-    # Average duration of check-ins
-    avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
-        .annotate(date=TruncDate('checkin_time'),
-                    duration=F('checkout_time') - F('checkin_time'))\
-        .values('date')\
-        .annotate(avg_duration=Avg('duration'))\
-        .order_by('date')
-    
-    duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-    duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]  # Convert to hours
-    
-    context = {
-        'data': data,
-        'daily_data': json.dumps(daily_data),
-        'weekdays': json.dumps(weekdays),
-        'class_names': json.dumps(class_names),
-        'class_counts': json.dumps(class_counts),
-        'student_names': json.dumps(student_names),
-        'student_counts': json.dumps(student_counts),
-        'duration_dates': json.dumps(duration_dates),
-        'duration_hours': json.dumps(duration_hours),
-        'tablist': ['Today','Weekly','Monthly','Semester','Tools']
-    }
-    
-    return render(request, 'monitor/visualize.html', context)
-
+    if loginUser is not None:
+        # Get all completed check-ins
+        data = Checkin.objects.filter(checkout_time__isnull=False).all()
+        
+        # Prepare data for daily check-ins chart
+        # Group by day of week (1=Sunday, 7=Saturday in Django's ExtractWeekDay)
+        daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(weekday=ExtractWeekDay('checkin_time'))\
+            .values('weekday')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('weekday')
+        
+        # Create daily checkins data for Chart.js
+        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        daily_data = [0] * 7  # Initialize with zeros
+        
+        for entry in daily_checkins:
+            # ExtractWeekDay returns 1-7 (Sunday-Saturday), we need to convert to 0-6 (Monday-Sunday)
+            day_index = entry['weekday'] % 7 - 1
+            if day_index == -1:  # Handle Sunday (7 becomes 6)
+                day_index = 6
+            daily_data[day_index] = entry['count']
+        
+        # Get top classes by check-ins - using the class_id field from the model
+        # If your Class model has a name field, update this query accordingly
+        top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
+            .values('class_field')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('-count')[:5]
+        
+        class_names = [f"Class #{c['class_field']}" for c in top_classes]  # Using ID as name
+        class_counts = [c['count'] for c in top_classes]
+        
+        # Get top students by check-ins - using fname and lname fields
+        top_students = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', output_field=CharField()))\
+            .values('full_name', 'student')\
+            .annotate(count=Count('checkin_id'))\
+            .order_by('-count')[:5]
+        
+        student_names = [s['full_name'] for s in top_students]
+        student_counts = [s['count'] for s in top_students]
+        
+        # Average duration of check-ins
+        avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
+            .annotate(date=TruncDate('checkin_time'),
+                        duration=F('checkout_time') - F('checkin_time'))\
+            .values('date')\
+            .annotate(avg_duration=Avg('duration'))\
+            .order_by('date')
+        
+        duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
+        duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]  # Convert to hours
+        
+        context = {
+            'data': data,
+            'daily_data': json.dumps(daily_data),
+            'weekdays': json.dumps(weekdays),
+            'class_names': json.dumps(class_names),
+            'class_counts': json.dumps(class_counts),
+            'student_names': json.dumps(student_names),
+            'student_counts': json.dumps(student_counts),
+            'duration_dates': json.dumps(duration_dates),
+            'duration_hours': json.dumps(duration_hours),
+            'tablist': ['Today','Weekly','Monthly','Semester','Tools']
+        }
+        
+        return render(request, 'monitor/visualize.html', context)
+    else:
+        return render(request, 'monitor/admin_login.html')
 
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
@@ -181,7 +183,7 @@ def index(request):
                 request.session['student_id'] = student.student_id
                 request.session['student_name'] = loginArr[0]
                 return redirect('class-select/')
-           
+            
             # else:
             #     #TODO: Change to setup once created
             #     student = Students.objects.create(fname = loginArr[0], lname = loginArr[1],western_id=None)
@@ -476,7 +478,7 @@ def class_select(request):
 #------------------------------------------------------------------------
 #'Secure' Admin Login
 #------------------------------------------------------------------------
-loginUser = None
+
 def admin_login(request):
     if request.method == 'POST':
         requestUser = request.POST.get('username')
@@ -484,10 +486,18 @@ def admin_login(request):
         user = Faculty.objects.filter(username = requestUser).first()
         global loginUser
         if user.password == requestPass:
-            #redirect to data
             loginUser = user
+            print('login successful')
+            return redirect('/visualize/')
         else:
             #redirect back to login with error
             print('Invalid login')
+            return render(request, 'monitor/admin_login.html')
     
     return render(request, 'monitor/admin_login.html')
+
+def admin_logout(request):
+    if request.method == 'POST':
+        global loginUser
+        loginUser = None
+        return render(request, 'monitor/admin_login.html')

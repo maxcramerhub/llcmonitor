@@ -5,7 +5,12 @@
 {% block content %}
 
 <ul style="background-color: #6f1a29!important;" class="nav justify-content-end">
-    <a class="nav-link btn btn-outline-danger p-2 m-2" href="#" tabindex="-1" aria-disabled="true">Sign Out</a>
+    <form method="post" action = "{% url 'monitor:admin_logout' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary btn-lg p-3 fs-4 w-100 shadow-sm">Sign Out</button>
+    </form>
+    
   </li>
 </ul>
 
