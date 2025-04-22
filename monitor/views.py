@@ -315,8 +315,12 @@ def class_check(request):
                     student=student,
                     class_field=class_obj
                 )
+                if request.session.get("student_name") != None:
+                    name = request.session.get("student_name")
+                else:
+                    name = "Student"
 
-                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {request.session.get("student_name")}!')
+                messages.success(request, f'Thanks for checking in to {class_obj.class_name}, {name}!')
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
@@ -513,7 +517,7 @@ def class_select(request):
 
     name = request.session.get('student_name')
     if name == None:
-        name = ""
+        name = "Student"
 
 
     array = []
