@@ -54,9 +54,12 @@
               <tbody>
                 {% for checkin in data %}
                 <tr>
-                  <td>{{ checkin.checkin_time }}</td>
-                  <td>{{ checkin.checkout_time }}</td>
-                  <td>
+                    {% load tz %}
+                    {% timezone "America/Denver" %}
+                        <td>{{ checkin.checkin_time }}</td>
+                        <td>{{ checkin.checkout_time }}</td>
+                    {% endtimezone %}
+                    <td>
                     {% if checkin.checkin_time and checkin.checkout_time %}
                       {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
                     {% else %}
