@@ -54,7 +54,7 @@ def export_checkins(request):
         # get class identifier (handle different model structures)
         try:
             # first try to get id directly
-            class_identifier = f"Class #{checkin.class_field.id}"
+            class_identifier = f"{checkin.class_field.class_id}"
         except AttributeError:
             try:
                 # try using pk if id doesn't exist
@@ -182,12 +182,12 @@ def visualize(request):
         
         # --- top classes chart data ---
         top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
-            .values('class_field')\
+            .values('class_field__class_name')\
             .annotate(count=Count('checkin_id'))\
             .order_by('-count')[:5]
         
         # prepare class names and counts for charts
-        class_names = [f"Class #{c['class_field']}" for c in top_classes]
+        class_names = [f"{c['class_field__class_name']}" for c in top_classes]
         class_counts = [c['count'] for c in top_classes]
         
         # --- top students chart data ---
@@ -492,7 +492,8 @@ def class_select(request):
         
         # Now selected_courses is a list containing all the checked values
         print(f"Selected courses: {selected_courses}")
-        for course_name in selected_courses:
+        for entry in selected_courses:
+            course_name, course_number, subject = entry.split('||')
             try:
                 # Get the class object
                 class_obj = Class.objects.get(class_name=course_name)
@@ -500,9 +501,8 @@ def class_select(request):
                 
             except Class.DoesNotExist:
                 # Handle case where class doesn't exist
-                course_number = course_name[-3:]
                 print(f"Class with name {course_name} does not exist")
-                class_obj = Class.objects.create(class_name=course_name, class_number = course_number)
+                class_obj = Class.objects.create(class_name=course_name, class_number = course_number, subject = subject)
                 student.classes.add(class_obj)
         
         # Optionally, save the student to ensure changes are committed

@@ -21,6 +21,7 @@ class Class(models.Model):
     instructor = models.CharField(max_length=200)
     semester = models.CharField(max_length=100)
     class_number = models.CharField(max_length = 3)
+    subject = models.CharField(max_length = 16)
 
     class Meta:
         managed = True

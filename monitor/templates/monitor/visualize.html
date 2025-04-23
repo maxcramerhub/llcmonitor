@@ -47,7 +47,7 @@
                   <th>Check In Time</th>
                   <th>Check Out Time</th>
                   <th>Duration (hrs)</th>
-                  <th>Student</th>
+                  <th>Subject</th>
                   <th>Class</th>
                 </tr>
               </thead>
@@ -66,8 +66,8 @@
                       none
                     {% endif %}
                   </td>
-                  <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
-                  <td>Class #{{ checkin.class_field.id }}</td>
+                  <td>{{ checkin.class_field.subject }}</td>
+                  <td>{{ checkin.class_field.class_name }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
