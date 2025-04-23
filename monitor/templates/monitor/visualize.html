@@ -4,11 +4,21 @@
 
 {% block content %}
 <!-- navigation bar -->
-<ul class="nav justify-content-end" style="background-color: #6f1a29!important;">
-  <li class="nav-item">
-    <a class="nav-link btn btn-outline-light p-2 m-2" href="#" tabindex="-1" aria-disabled="true">Sign Out</a>
-  </li>
-</ul>
+<nav class="navbar navbar-expand-lg navbar-light bg-light p-4 shadow-lg mb-3">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">LLC Admin</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav">
+        <a class="nav-link active" aria-current="page" href="#">Dashboard</a>
+        <a class="nav-link" href="#">Tutors</a>
+        <a class="nav-link" href="#">Admins</a>
+      </div>
+    </div>
+  </div>
+</nav>
 
 <div class="container-fluid mt-4">
   <!-- header with dropdown -->

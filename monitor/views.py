@@ -208,6 +208,7 @@ def visualize(request):
         .values('date')\
         .annotate(avg_duration=Avg('duration'))\
         .order_by('date')
+
     
     # prepare duration dates and hours for charts
     duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
@@ -224,7 +225,7 @@ def visualize(request):
         'student_counts': json.dumps(student_counts),
         'duration_dates': json.dumps(duration_dates),
         'duration_hours': json.dumps(duration_hours),
-        'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
+        'tablist': ['Today', 'Weekly', 'Monthly', 'Semester']
     }
     
     return render(request, 'monitor/visualize.html', context)

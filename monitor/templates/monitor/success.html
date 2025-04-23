@@ -21,7 +21,7 @@
 
 <div class="container mt-4 position-relative" style="z-index: 2;">
     {% if request.GET.checkout_status %}
-    <h2>Would you like to leave a review?</h2>
+    <h2 class="text-white">Would you like to leave a review?</h2>
     <a href="{% url 'monitor:leave_review' %}" class="btn btn-success me-2">Yes</a>
     <a href="{% url 'monitor:index' %}" class="btn btn-secondary">No</a>
     {% endif %}
