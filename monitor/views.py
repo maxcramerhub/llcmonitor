@@ -213,7 +213,6 @@ def visualize(request):
         # prepare duration dates and hours for charts
         duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
         duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
-        
         # build context with all chart data
         context = {
             'data': data,
@@ -225,7 +224,8 @@ def visualize(request):
             'student_counts': json.dumps(student_counts),
             'duration_dates': json.dumps(duration_dates),
             'duration_hours': json.dumps(duration_hours),
-            'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools']
+            'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools'],
+            'datelist': list(duration_dates)
         }
         
         return render(request, 'monitor/visualize.html', context)

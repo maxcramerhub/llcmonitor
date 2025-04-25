@@ -29,6 +29,16 @@
           {% endfor %}
         </ul>
       </div>
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          Change Date
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
+          {% for date in datelist %}
+            <li><a class="dropdown-item" href="#">{{ date }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -239,11 +249,15 @@
       const timeframe = this.getAttribute('data-timeframe');
       
       // update the title
-      document.querySelector('h1').textContent = timeframe;
+      if(timeframe != null){
+        document.querySelector('h1').textContent = timeframe;
+        console.log(`Changed to ${timeframe} view`);
+      }
+      
       
       // here you would typically load different data based on the timeframe
       // for demo purposes, we're just updating the title
-      console.log(`Changed to ${timeframe} view`);
+      
       
       // you could add AJAX calls here to fetch new data from the server
       // and update the charts and table
