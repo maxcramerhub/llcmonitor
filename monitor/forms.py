@@ -8,12 +8,12 @@ class ReviewForm(forms.ModelForm):
         queryset=Tutor.objects.all(),
         empty_label="Select a tutor",
         label="Tutor",
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': 'form-select p-4 shadow-sm'})
     )
     class Meta:
         model = Reviews
         fields = ['tutor', 'written_review', 'rating']  # include fields
         widgets = {
-            'written_review': forms.Textarea(attrs={'rows': 4, 'cols': 40, 'style': 'width: 100%; height: 150px;'}),
+            'written_review': forms.Textarea(attrs={'rows': 4, 'cols': 40, 'style': 'width: 100%; height: 150px;', 'class': 'form-control shadow-sm'}),
             'rating': forms.HiddenInput(),
         }
