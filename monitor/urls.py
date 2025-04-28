@@ -16,4 +16,5 @@ urlpatterns = [
     path('success', views.success, name='review_success'),
     path('leave_review/', views.leave_review, name='leave_review'),
     path('thank_you/', views.thank_you, name='thank_you'),
+    path('fetch_checkins/', views.fetch_checkins, name = 'fetch_checkins'),
 ]

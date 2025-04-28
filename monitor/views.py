@@ -13,7 +13,12 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import time
+from pytz import timezone
+import dateutil.parser
 
+mountain_tz = timezone('America/Denver')
 # ------------------------------------------------------------------------
 # CSV Export
 # ------------------------------------------------------------------------
@@ -79,8 +84,8 @@ def export_checkins(request):
 # Visualization better comments
 # ------------------------------------------------------------------------
 
-from django.db.models import Count, F, Avg
-from django.db.models.functions import TruncDate, ExtractWeekDay, Concat
+from django.db.models import Count, F, Avg, ExpressionWrapper, DateTimeField
+from django.db.models.functions import TruncDate, ExtractWeekDay, Concat, ExtractHour
 from django.db.models.expressions import Value
 from django.db.models.fields import CharField
 from datetime import datetime, timedelta
@@ -169,7 +174,7 @@ def visualize(request):
             .order_by('weekday')
         
         # prepare weekday labels and initialize data array
-        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        weekdays = [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         daily_data = [0] * 7  # zero placeholder for each day
         
         # map database results to correct weekday position
@@ -619,7 +624,144 @@ def class_select(request):
 
     return render(request, 'monitor/class_select.html', context)
 
+#------------------------------------------------------------------------
+#AJAX for filling admin data
+#------------------------------------------------------------------------
+@csrf_exempt
+def fetch_checkins(request):
+    import dateutil.parser
 
+...
+
+@csrf_exempt
+def fetch_checkins(request):
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            timeframe = body.get('timeframe')
+            selected_date = body.get('selected_date')
+
+            if not timeframe:
+                return JsonResponse({'error': 'Missing timeframe'}, status=400)
+
+            if not selected_date:
+                selected_date = timezone.now().date()
+            else:
+                # 🌟 Safer parsing
+                if isinstance(selected_date, str):
+                    try:
+                        parsed_date = dateutil.parser.parse(selected_date)
+                        selected_date = parsed_date.date()
+                    except Exception:
+                        return JsonResponse({'error': 'Invalid selected_date format'}, status=400)
+
+            checkins_query = Checkin.objects.filter(checkout_time__isnull=False)
+
+            if timeframe == 'Today':
+                start = datetime.combine(selected_date, time.min)
+                end = datetime.combine(selected_date, time.max)
+            elif timeframe in ['Weekly', 'Monthly', 'Semester']:
+                if timeframe == 'Weekly':
+                    start_date = selected_date - timedelta(days=6)
+                elif timeframe == 'Monthly':
+                    start_date = selected_date.replace(day=1)
+                else:
+                    if selected_date.month <= 6:
+                        start_date = selected_date.replace(month=1, day=1)
+                    else:
+                        start_date = selected_date.replace(month=7, day=1)
+                start = datetime.combine(start_date, time.min)
+                end = datetime.combine(selected_date, time.max)
+            else:
+                return JsonResponse({'error': 'Invalid timeframe'}, status=400)
+
+            # Localize times
+            start = mountain_tz.localize(start)
+            end = mountain_tz.localize(end)
+
+            checkins_query = checkins_query.filter(checkin_time__range=(start, end))
+
+            if timeframe == 'Today':
+                breakdown = checkins_query.annotate(
+                    local_checkin_time=ExpressionWrapper(
+                        F('checkin_time') + timedelta(hours=-6),  # shift manually for MDT
+                        output_field=DateTimeField()
+                    )
+                ).annotate(
+                    hour=ExtractHour('local_checkin_time')
+                ).values('hour')\
+                .annotate(count=Count('checkin_id'))\
+                .order_by('hour')
+
+                labels = [f"{h}:00" for h in range(24)]
+                data = [0] * 24
+                for entry in breakdown:
+                    data[entry['hour']] = entry['count']
+            else:
+                breakdown = checkins_query.annotate(date=TruncDate('checkin_time'))\
+                    .values('date')\
+                    .annotate(count=Count('checkin_id'))\
+                    .order_by('date')
+
+                labels = []
+                data = []
+                current = start.date()
+                while current <= selected_date:
+                    labels.append(current.strftime('%Y-%m-%d'))
+                    data.append(0)
+                    current += timedelta(days=1)
+
+                label_index = {d: i for i, d in enumerate(labels)}
+                for entry in breakdown:
+                    idx = label_index[entry['date'].strftime('%Y-%m-%d')]
+                    data[idx] = entry['count']
+
+            # Table entries
+            checkins_serialized = []
+            for checkin in checkins_query.select_related('class_field'):
+                checkins_serialized.append({
+                    'checkin_time': checkin.checkin_time.isoformat() if checkin.checkin_time else '',
+                    'checkout_time': checkin.checkout_time.isoformat() if checkin.checkout_time else '',
+                    'class_subject': checkin.class_field.subject if checkin.class_field else '',
+                    'class_name': checkin.class_field.class_name if checkin.class_field else ''
+                })
+
+            # Top Classes
+            top_classes = checkins_query.values('class_field__class_name')\
+                .annotate(count=Count('checkin_id'))\
+                .order_by('-count')[:5]
+            classLabels = [c['class_field__class_name'] for c in top_classes]
+            classCounts = [c['count'] for c in top_classes]
+
+            # Average durations
+            avg_durations = checkins_query.annotate(duration=F('checkout_time') - F('checkin_time'))\
+                .annotate(date=TruncDate('checkin_time'))\
+                .values('date')\
+                .annotate(avg_duration=Avg('duration'))\
+                .order_by('date')
+
+            durationLabels = []
+            durationHours = []
+            for entry in avg_durations:
+                durationLabels.append(entry['date'].strftime('%Y-%m-%d'))
+                durationHours.append(entry['avg_duration'].total_seconds() / 3600)
+
+            return JsonResponse({
+                'labels': labels,
+                'data': data,
+                'checkins': checkins_serialized,
+                'classLabels': classLabels,
+                'classCounts': classCounts,
+                'durationLabels': durationLabels,
+                'durationHours': durationHours,
+            })
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
 #------------------------------------------------------------------------
 #'Secure' Admin Login
