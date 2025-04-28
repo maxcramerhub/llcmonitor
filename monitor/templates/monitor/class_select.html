@@ -75,7 +75,7 @@
                               class="btn-check" 
                               name="selected_course" 
                               id="{{ subject|slugify }}-{{ course.Course_Number }}" 
-                              value="{{ course.Title }}-{{ course.Course_Number }}"
+                              value="{{ course.Title }}||{{ course.Course_Number }}||{{ course.Subject }}"
                               {% if course.Title|add:"-"|add:course.Course_Number in classes %}checked{% endif %}
                               autocomplete="off"               
                               >

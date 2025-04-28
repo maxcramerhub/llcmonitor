@@ -35,6 +35,16 @@
           {% endfor %}
         </ul>
       </div>
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          Change Date
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
+          {% for date in datelist %}
+            <li><a class="dropdown-item" href="#">{{ date }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -53,24 +63,27 @@
                   <th>Check In Time</th>
                   <th>Check Out Time</th>
                   <th>Duration (hrs)</th>
-                  <th>Student</th>
+                  <th>Subject</th>
                   <th>Class</th>
                 </tr>
               </thead>
               <tbody>
                 {% for checkin in data %}
                 <tr>
-                  <td>{{ checkin.checkin_time }}</td>
-                  <td>{{ checkin.checkout_time }}</td>
-                  <td>
+                    {% load tz %}
+                    {% timezone "America/Denver" %}
+                        <td>{{ checkin.checkin_time }}</td>
+                        <td>{{ checkin.checkout_time }}</td>
+                    {% endtimezone %}
+                    <td>
                     {% if checkin.checkin_time and checkin.checkout_time %}
                       {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
                     {% else %}
                       none
                     {% endif %}
                   </td>
-                  <td>{{ checkin.student.fname }} {{ checkin.student.lname }}</td>
-                  <td>Class #{{ checkin.class_field.id }}</td>
+                  <td>{{ checkin.class_field.subject }}</td>
+                  <td>{{ checkin.class_field.class_name }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -138,7 +151,7 @@
 
   // daily check-ins bar chart
   const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-  new Chart(dailyCtx, {
+  const dailyChart = new Chart(dailyCtx, {
     type: 'bar',
     data: {
       labels: weekdays,
@@ -171,7 +184,7 @@
 
   // top classes pie chart
   const classCtx = document.getElementById('classChart').getContext('2d');
-  new Chart(classCtx, {
+  const classPie = new Chart(classCtx, {
     type: 'pie',
     data: {
       labels: classNames,
@@ -196,7 +209,7 @@
 
   // monthly line chart
   const monthlyChart = document.getElementById('chartMonthly').getContext('2d');
-  new Chart(monthlyChart, {
+  const monthChart = new Chart(monthlyChart, {
     type: 'line',
     data: {
       labels: durationDates,
@@ -236,21 +249,120 @@
   });
 
   // dropdown functionality
+  let selectedDate = null;
   document.querySelectorAll('.dropdown-item').forEach(item => {
-    item.addEventListener('click', function(e) {
+    item.addEventListener('click', function (e) {
       e.preventDefault();
-      const timeframe = this.getAttribute('data-timeframe');
       
-      // update the title
-      document.querySelector('h1').textContent = timeframe;
-      
-      // here you would typically load different data based on the timeframe
-      // for demo purposes, we're just updating the title
-      console.log(`Changed to ${timeframe} view`);
-      
-      // you could add AJAX calls here to fetch new data from the server
-      // and update the charts and table
+      const timeframeAttr = this.getAttribute('data-timeframe');
+      const dateText = this.textContent.trim();
+
+      let timeframe = null;
+
+      if (timeframeAttr) {
+        timeframe = timeframeAttr;
+        selectedDate = new Date().toISOString().split('T')[0]; // 🚨 Today’s date if clicking timeframe
+      } else {
+        timeframe = document.querySelector('h1').textContent.trim();
+        selectedDate = dateText;  // User picked a real date
+      }
+
+      console.log(`Selected timeframe: ${timeframe}, date: ${selectedDate}`);
+
+      if (!timeframe || !selectedDate) {
+        console.error('Missing timeframe or selected date');
+        return;
+      }
+
+      fetch('/fetch_checkins/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          timeframe: timeframe,
+          selected_date: selectedDate
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Server responded with an error');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(data);
+        updateDailyChart(data.labels, data.data);
+        updatePieChart(data.classLabels || [], data.classCounts || []);
+        updateDurationChart(data.durationLabels || [], data.durationHours || []);
+
+        if (timeframe === 'Today') {
+          dailyChart.options.plugins.title.text = `Checkins by Hour for ${selectedDate}`;
+        } else {
+          dailyChart.options.plugins.title.text = `Checkins by Day`;
+        }
+        dailyChart.update();
+      })
+      .catch(error => {
+        console.error('Fetch Error:', error);
+      });
     });
   });
+
+
+  function updateDailyChart(labels, data){
+    dailyChart.data.labels = labels;
+    dailyChart.data.datasets[0].data = data;
+    dailyChart.update();
+  }
+  
+  function calculateDuration(start, end) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diff = (endDate - startDate) / (1000 * 60 * 60);
+    return diff.toFixed(2);
+  }
+
+  function updatePieChart(labels, data) {
+    classPie.data.labels = labels;
+    classPie.data.datasets[0].data = data;
+    classPie.update();
+  }
+
+  function updateDurationChart(labels, data) {
+    monthChart.data.labels = labels;
+    monthChart.data.datasets[0].data = data;
+    monthChart.update();
+  }
+
+  // CSRF token helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');  // now cookies is defined here
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+  }
+  function formatDateTime(isoString) {
+    const options = {
+      timeZone: 'America/Denver',   // Correct timezone
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', options);  // <-- Force 'en-US' explicitly!
+  }
 </script>
 {% endblock %}
