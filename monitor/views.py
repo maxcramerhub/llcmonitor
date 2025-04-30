@@ -3,22 +3,29 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 import requests
 from django.http import JsonResponse
-from django.conf import settings
 from django.core.cache import cache
 from monitor.models import *
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
 import json
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from datetime import time
 from pytz import timezone
 import dateutil.parser
+from collections import defaultdict
+from django.db.models import Count, F, Avg, ExpressionWrapper, DateTimeField
+from django.db.models.functions import TruncDate, ExtractWeekDay, Concat, ExtractHour
+from django.db.models.expressions import Value
+from django.db.models.fields import CharField
+from datetime import datetime, timedelta
+from .forms import ReviewForm
+from django.utils.timezone import now
+
 
 mountain_tz = timezone('America/Denver')
+
 # ------------------------------------------------------------------------
 # CSV Export
 # ------------------------------------------------------------------------
@@ -83,14 +90,6 @@ def export_checkins(request):
 # ------------------------------------------------------------------------
 # Visualization better comments
 # ------------------------------------------------------------------------
-
-from django.db.models import Count, F, Avg, ExpressionWrapper, DateTimeField
-from django.db.models.functions import TruncDate, ExtractWeekDay, Concat, ExtractHour
-from django.db.models.expressions import Value
-from django.db.models.fields import CharField
-from datetime import datetime, timedelta
-from .forms import ReviewForm
-from django.utils.timezone import now
 
 def thank_you(request):
     return render(request, 'thank_you.html')
@@ -209,15 +208,18 @@ def visualize(request):
         
         # --- average duration chart data ---
         avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(date=TruncDate('checkin_time'),
+            .annotate(date = F('checkin_time'),
                         duration=F('checkout_time') - F('checkin_time'))\
-            .values('date')\
             .annotate(avg_duration=Avg('duration'))\
             .order_by('date')
         
         # prepare duration dates and hours for charts
-        duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-        duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
+        duration_dates = [checkin.checkin_time.astimezone(mountain_tz).strftime('%Y-%m-%d') for checkin in avg_durations]
+        duration_dates = list(dict.fromkeys(duration_dates))
+        duration_hours = [
+            checkin.avg_duration.total_seconds() / 3600
+            for checkin in avg_durations
+        ]
         # build context with all chart data
         context = {
             'data': data,
@@ -629,25 +631,21 @@ def class_select(request):
 #------------------------------------------------------------------------
 @csrf_exempt
 def fetch_checkins(request):
-    import dateutil.parser
-
-...
-
-@csrf_exempt
-def fetch_checkins(request):
     if request.method == 'POST':
         try:
+            #Loading json request from visualize
             body = json.loads(request.body)
             timeframe = body.get('timeframe')
             selected_date = body.get('selected_date')
 
+            #Send error if there is no selected timeframe
             if not timeframe:
                 return JsonResponse({'error': 'Missing timeframe'}, status=400)
 
+            #Set selected date to today if no selected date, otherwise correct date to fit formatting later on
             if not selected_date:
                 selected_date = timezone.now().date()
             else:
-                # 🌟 Safer parsing
                 if isinstance(selected_date, str):
                     try:
                         parsed_date = dateutil.parser.parse(selected_date)
@@ -655,8 +653,10 @@ def fetch_checkins(request):
                     except Exception:
                         return JsonResponse({'error': 'Invalid selected_date format'}, status=400)
 
+            #pull all non-null checkins
             checkins_query = Checkin.objects.filter(checkout_time__isnull=False)
 
+            #Determine the date range based on timeframe
             if timeframe == 'Today':
                 start = datetime.combine(selected_date, time.min)
                 end = datetime.combine(selected_date, time.max)
@@ -675,65 +675,84 @@ def fetch_checkins(request):
             else:
                 return JsonResponse({'error': 'Invalid timeframe'}, status=400)
 
-            # Localize times
+            #Convert start/end to mdt, query checkins from that range
             start = mountain_tz.localize(start)
             end = mountain_tz.localize(end)
-
             checkins_query = checkins_query.filter(checkin_time__range=(start, end))
-
+            
+            #Break down data for charts
             if timeframe == 'Today':
+                #Bread down the query to extract the time of checkin subject
                 breakdown = checkins_query.annotate(
                     local_checkin_time=ExpressionWrapper(
-                        F('checkin_time') + timedelta(hours=-6),  # shift manually for MDT
+                        F('checkin_time') + timedelta(hours=-6),
                         output_field=DateTimeField()
                     )
                 ).annotate(
                     hour=ExtractHour('local_checkin_time')
-                ).values('hour')\
+                ).values('hour', 'class_field__subject')\
                 .annotate(count=Count('checkin_id'))\
-                .order_by('hour')
+                .order_by('hour', 'class_field__subject')
 
+                #Create labels for each hour
                 labels = [f"{h}:00" for h in range(24)]
-                data = [0] * 24
+                subject_set = set()
+                subject_totals = defaultdict(lambda: [0] * 24)
+
+                # set subject, hour for each entry
                 for entry in breakdown:
-                    data[entry['hour']] = entry['count']
+                    subject = entry['class_field__subject'] or 'Unknown'
+                    hour = entry['hour']
+                    subject_totals[subject][hour] = entry['count']
+                    subject_set.add(subject)
+
+                # allow for stacking in charts
+                stacked_subjects = []
+                for subject in sorted(subject_set):
+                    stacked_subjects.append({
+                        'label': subject,
+                        'data': subject_totals[subject]
+                    })
+
+            #Works the same as above, just labels based on date, not time
             else:
                 breakdown = checkins_query.annotate(date=TruncDate('checkin_time'))\
-                    .values('date')\
+                    .values('date', 'class_field__subject')\
                     .annotate(count=Count('checkin_id'))\
-                    .order_by('date')
+                    .order_by('date', 'class_field__subject')
 
                 labels = []
-                data = []
                 current = start.date()
                 while current <= selected_date:
                     labels.append(current.strftime('%Y-%m-%d'))
-                    data.append(0)
                     current += timedelta(days=1)
 
-                label_index = {d: i for i, d in enumerate(labels)}
+                label_index = {label: idx for idx, label in enumerate(labels)}
+                subject_totals = defaultdict(lambda: [0] * len(labels))
+                subject_set = set()
+
                 for entry in breakdown:
-                    idx = label_index[entry['date'].strftime('%Y-%m-%d')]
-                    data[idx] = entry['count']
+                    subject = entry['class_field__subject'] or 'Unknown'
+                    date_str = entry['date'].strftime('%Y-%m-%d')
+                    idx = label_index[date_str]
+                    subject_totals[subject][idx] = entry['count']
+                    subject_set.add(subject)
 
-            # Table entries
-            checkins_serialized = []
-            for checkin in checkins_query.select_related('class_field'):
-                checkins_serialized.append({
-                    'checkin_time': checkin.checkin_time.isoformat() if checkin.checkin_time else '',
-                    'checkout_time': checkin.checkout_time.isoformat() if checkin.checkout_time else '',
-                    'class_subject': checkin.class_field.subject if checkin.class_field else '',
-                    'class_name': checkin.class_field.class_name if checkin.class_field else ''
-                })
+                stacked_subjects = []
+                for subject in sorted(subject_set):
+                    stacked_subjects.append({
+                        'label': subject,
+                        'data': subject_totals[subject]
+                    })
 
-            # Top Classes
+            # Updated for pie chart based on timeframe
             top_classes = checkins_query.values('class_field__class_name')\
                 .annotate(count=Count('checkin_id'))\
                 .order_by('-count')[:5]
             classLabels = [c['class_field__class_name'] for c in top_classes]
             classCounts = [c['count'] for c in top_classes]
 
-            # Average durations
+            # Updated average durations for avg durations chart
             avg_durations = checkins_query.annotate(duration=F('checkout_time') - F('checkin_time'))\
                 .annotate(date=TruncDate('checkin_time'))\
                 .values('date')\
@@ -747,9 +766,10 @@ def fetch_checkins(request):
                 durationHours.append(entry['avg_duration'].total_seconds() / 3600)
 
             return JsonResponse({
-                'labels': labels,
-                'data': data,
-                'checkins': checkins_serialized,
+                'dailyChartSubjects': {
+                    'labels': labels,
+                    'datasets': stacked_subjects
+                },
                 'classLabels': classLabels,
                 'classCounts': classCounts,
                 'durationLabels': durationLabels,
@@ -760,8 +780,9 @@ def fetch_checkins(request):
             import traceback
             traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
-    else:
-        return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
 
 #------------------------------------------------------------------------
 #'Secure' Admin Login

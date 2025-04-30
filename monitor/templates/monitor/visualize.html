@@ -99,7 +99,7 @@
       <!-- daily check-ins chart -->
       <div class="col-md-6 mb-3">
         <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
-          <h3 class="text-center">Daily Check-ins</h3>
+          <h3 class="text-center">Daily Check-ins by Subject</h3>
           <canvas id="dailyChart"></canvas>
         </div>
       </div>
@@ -154,35 +154,46 @@
   const dailyChart = new Chart(dailyCtx, {
     type: 'bar',
     data: {
-      labels: weekdays,
-      datasets: [{
-        label: 'Number of Check-ins',
-        data: dailyData,
-        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
-      }]
+      labels: [],
+      datasets: []
     },
     options: {
+      responsive: true,
       scales: {
+        x: {
+          stacked: true,
+          title: { display: true, text: 'Date' }
+        },
         y: {
+          stacked: true,
           beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Number of Check-ins'
-          }
+          title: { display: true, text: 'Check-ins' }
         }
       },
       plugins: {
         title: {
           display: true,
-          text: 'Check-ins by Day of Week'
+          text: 'Check-ins by Day and Subject'
+        },
+        legend: {
+          position: 'top'
         }
       }
     }
   });
 
-  // top classes pie chart
+  // helper to update stacked chart by subject
+  function updateStackedChart(subjectData) {
+    const colors = randomColor(subjectData.datasets.length);
+    dailyChart.data.labels = subjectData.labels;
+    dailyChart.data.datasets = subjectData.datasets.map((ds, i) => ({
+      ...ds,
+      backgroundColor: colors[i]
+    }));
+    dailyChart.update();
+  }
+  
+ // class pie chart 
   const classCtx = document.getElementById('classChart').getContext('2d');
   const classPie = new Chart(classCtx, {
     type: 'pie',
@@ -250,29 +261,27 @@
 
   // dropdown functionality
   let selectedDate = null;
+  let selectedTimeframe = 'Today';
+
   document.querySelectorAll('.dropdown-item').forEach(item => {
     item.addEventListener('click', function (e) {
       e.preventDefault();
-      
-      const timeframeAttr = this.getAttribute('data-timeframe');
-      const dateText = this.textContent.trim();
 
-      let timeframe = null;
+      const timeframeAttr = this.getAttribute('data-timeframe');
+      const clickedText = this.textContent.trim();
 
       if (timeframeAttr) {
-        timeframe = timeframeAttr;
-        selectedDate = new Date().toISOString().split('T')[0]; // 🚨 Today’s date if clicking timeframe
+        // User selected a new timeframe (e.g., "Weekly")
+        selectedTimeframe = timeframeAttr;
+        if (!selectedDate) {
+          selectedDate = new Date().toISOString().split('T')[0];  // Default to today
+        }
       } else {
-        timeframe = document.querySelector('h1').textContent.trim();
-        selectedDate = dateText;  // User picked a real date
+        // User clicked a date (e.g., "2025-04-01")
+        selectedDate = clickedText;
       }
 
-      console.log(`Selected timeframe: ${timeframe}, date: ${selectedDate}`);
-
-      if (!timeframe || !selectedDate) {
-        console.error('Missing timeframe or selected date');
-        return;
-      }
+      console.log(`Selected timeframe: ${selectedTimeframe}, date: ${selectedDate}`);
 
       fetch('/fetch_checkins/', {
         method: 'POST',
@@ -281,27 +290,22 @@
           'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-          timeframe: timeframe,
+          timeframe: selectedTimeframe,
           selected_date: selectedDate
         })
       })
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Server responded with an error');
-        }
+        if (!response.ok) throw new Error('Server responded with an error');
         return response.json();
       })
       .then(data => {
-        console.log(data);
-        updateDailyChart(data.labels, data.data);
+        updateStackedChart(data.dailyChartSubjects);
         updatePieChart(data.classLabels || [], data.classCounts || []);
         updateDurationChart(data.durationLabels || [], data.durationHours || []);
-
-        if (timeframe === 'Today') {
-          dailyChart.options.plugins.title.text = `Checkins by Hour for ${selectedDate}`;
-        } else {
-          dailyChart.options.plugins.title.text = `Checkins by Day`;
-        }
+        dailyChart.options.plugins.title.text = 
+          (selectedTimeframe === 'Today') 
+            ? `Check-ins by Hour for ${selectedDate}` 
+            : `Check-ins by Day starting ${selectedDate}`;
         dailyChart.update();
       })
       .catch(error => {
