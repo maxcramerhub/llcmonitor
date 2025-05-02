@@ -1,0 +1,78 @@
+{% extends 'monitor/admin_base.html' %}
+
+{% block title %}Tutor Management{% endblock %}
+
+{% block admin_content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Tutor Management</h2>
+        <a href="{% url 'monitor:add_tutor' %}" class="btn btn-primary">Add New Tutor</a>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="shadow-lg mb-5" style="background-color: white; padding: 20px; border-radius: 20px;">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Western ID</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tutor in tutors %}
+                    <tr>
+                        <td>{{ tutor.tutor_id }}</td>
+                        <td>{{ tutor.fname }}</td>
+                        <td>{{ tutor.lname }}</td>
+                        <td>{{ tutor.western_id|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'monitor:edit_tutor' tutor.tutor_id %}" class="btn btn-sm btn-primary">Edit</a>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tutor.tutor_id }}">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal{{ tutor.tutor_id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tutor.tutor_id }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel{{ tutor.tutor_id }}">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to delete {{ tutor.fname }} {{ tutor.lname }}?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'monitor:delete_tutor' tutor.tutor_id %}" class="btn btn-danger">Delete</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No tutors found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

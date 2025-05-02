@@ -70,6 +70,7 @@ class Tutor(models.Model):
     fname = models.CharField(max_length=100)
     lname = models.CharField(max_length=100)
     western_id = models.CharField(max_length=50, blank=True, null=True)
+    classes = models.ManyToManyField(Class, related_name='tutors')
 
     class Meta:
         managed = True
