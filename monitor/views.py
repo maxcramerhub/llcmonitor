@@ -18,6 +18,7 @@ from datetime import time
 from pytz import timezone
 import dateutil.parser
 from django.core.paginator import Paginator
+import pytz
 
 mountain_tz = timezone('America/Denver')
 # ------------------------------------------------------------------------
@@ -29,56 +30,37 @@ from django.http import HttpResponse
 from django.utils import timezone
 
 def export_checkins(request):
-    # create response for csv download
+    # Create the HttpResponse object with CSV header
     response = HttpResponse(content_type='text/csv')
-    
-    # set filename with timestamp
-    current_time = timezone.now().strftime('%Y-%m-%d')
-    response['Content-Disposition'] = f'attachment; filename="checkins_{current_time}.csv"'
+    response['Content-Disposition'] = 'attachment; filename="checkins.csv"'
 
     writer = csv.writer(response)
-    writer.writerow([
-        'Check-in ID', 
-        'Student Name', 
-        'Class', 
-        'Check-in Time', 
-        'Check-out Time', 
-        'Duration (hours)'
-    ])
+    writer.writerow(['Check In Time', 'Check Out Time', 'Duration (mins)', 'Subject', 'Class'])
+
+    # Get all check-ins
+    checkins = Checkin.objects.select_related('class_field').all()
     
-    # get completed check-ins
-    checkins = Checkin.objects.filter(checkout_time__isnull=False).all()
-    
-    # write data rows
+    # Get Mountain timezone
+    mountain_tz = pytz.timezone('America/Denver')
+
     for checkin in checkins:
-        # calculate duration in hours
-        if checkin.checkin_time and checkin.checkout_time:
-            duration = (checkin.checkout_time - checkin.checkin_time).total_seconds() / 3600
-        else:
-            duration = 0
+        # Convert times to Mountain timezone
+        checkin_time = checkin.checkin_time.astimezone(mountain_tz) if checkin.checkin_time else None
+        checkout_time = checkin.checkout_time.astimezone(mountain_tz) if checkin.checkout_time else None
         
-        # get class identifier (handle different model structures)
-        try:
-            # first try to get id directly
-            class_identifier = f"{checkin.class_field.class_id}"
-        except AttributeError:
-            try:
-                # try using pk if id doesn't exist
-                class_identifier = f"Class #{checkin.class_field.pk}"
-            except AttributeError:
-                # fallback to using the class object string representation
-                class_identifier = f"Class #{checkin.class_field}"
-            
-        # write row for each checkin
+        # Calculate duration in minutes
+        duration = None
+        if checkin_time and checkout_time:
+            duration = int((checkout_time - checkin_time).total_seconds() / 60)
+
         writer.writerow([
-            checkin.checkin_id,
-            f"{checkin.student.fname} {checkin.student.lname}",
-            class_identifier,
-            checkin.checkin_time.astimezone('America/Denver'),
-            checkin.checkout_time.astimezone('America/Denver'),
-            f"{duration:.2f}"  # format to 2 decimal places
+            checkin_time.strftime('%Y-%m-%d %I:%M %p') if checkin_time else 'None',
+            checkout_time.strftime('%Y-%m-%d %I:%M %p') if checkout_time else 'None',
+            duration if duration is not None else 'None',
+            checkin.class_field.subject,
+            checkin.class_field.class_name
         ])
-    
+
     return response
 
 # ------------------------------------------------------------------------
