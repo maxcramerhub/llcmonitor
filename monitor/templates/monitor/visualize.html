@@ -45,7 +45,7 @@
                                 <tr>
                                     <th>Check In Time</th>
                                     <th>Check Out Time</th>
-                                    <th>Duration (hrs)</th>
+                                    <th>Duration (mins)</th>
                                     <th>Subject</th>
                                     <th>Class</th>
                                 </tr>
@@ -245,23 +245,15 @@
 
       if (timeframeAttr) {
         timeframe = timeframeAttr;
-        selectedDate = new Date().toISOString().split('T')[0]; // Today's date if clicking timeframe
+        selectedDate = new Date().toISOString().split('T')[0];
         h1Element.textContent = timeframe;
       } else {
-        // This is a date selection
         timeframe = h1Element.textContent.trim();
         selectedDate = dateText;
         h1Element.textContent = dateText;
       }
 
-      console.log(`Selected timeframe: ${timeframe}, date: ${selectedDate}`);
-
-      if (!timeframe || !selectedDate) {
-        console.error('Missing timeframe or selected date');
-        return;
-      }
-
-      fetch('/fetch_checkins/', {
+      fetch('/fetch-checkins/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -272,31 +264,60 @@
           selected_date: selectedDate
         })
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Server responded with an error');
-        }
-        return response.json();
-      })
+      .then(response => response.json())
       .then(data => {
-        console.log(data);
+        // Update daily chart
         updateDailyChart(data.labels, data.data);
-        updatePieChart(data.classLabels || [], data.classCounts || []);
-        updateDurationChart(data.durationLabels || [], data.durationHours || []);
-
         if (timeframe === 'Today') {
           dailyChart.options.plugins.title.text = `Checkins by Hour for ${selectedDate}`;
         } else {
           dailyChart.options.plugins.title.text = `Checkins by Day`;
         }
         dailyChart.update();
+
+        // Update pie chart
+        updatePieChart(data.classLabels, data.classCounts);
+
+        // Update duration chart
+        updateDurationChart(data.durationLabels, data.durationHours);
+
+        // Update table
+        const tbody = document.querySelector('table tbody');
+        tbody.innerHTML = '';
+        data.checkins.forEach(checkin => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${formatDateTime(checkin.checkin_time)}</td>
+            <td>${checkin.checkout_time ? formatDateTime(checkin.checkout_time) : 'none'}</td>
+            <td>${checkin.checkin_time && checkin.checkout_time ? 
+              Math.round((new Date(checkin.checkout_time) - new Date(checkin.checkin_time)) / (1000 * 60)) : 
+              'none'}</td>
+            <td>${checkin.class_subject}</td>
+            <td>${checkin.class_name}</td>
+          `;
+          tbody.appendChild(row);
+        });
       })
-      .catch(error => {
-        console.error('Fetch Error:', error);
-      });
+      .catch(error => console.error('Error:', error));
     });
   });
 
+  function updateTable(data) {
+    const tbody = document.querySelector('table tbody');
+    tbody.innerHTML = '';
+    
+    data.forEach(checkin => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${formatDateTime(checkin.checkin_time)}</td>
+        <td>${checkin.checkout_time ? formatDateTime(checkin.checkout_time) : 'none'}</td>
+        <td>${checkin.duration || 'none'}</td>
+        <td>${checkin.class_field.subject}</td>
+        <td>${checkin.class_field.class_name}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
 
   function updateDailyChart(labels, data){
     dailyChart.data.labels = labels;
