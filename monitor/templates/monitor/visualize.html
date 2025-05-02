@@ -24,7 +24,7 @@
   <!-- header with dropdown -->
   <div class="row mb-4">
     <div class="col d-flex justify-content-center align-items-center">
-      <h1 class="me-3" style="color:whitesmoke">Today</h1>
+      <h1 id="viewLabel" class="me-3" style="color:whitesmoke">Weekly – {{ datelist|last }}</h1>
       <div class="dropdown">
         <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
           Change View
@@ -68,24 +68,17 @@
                 </tr>
               </thead>
               <tbody>
-                {% for checkin in data %}
-                <tr>
-                    {% load tz %}
-                    {% timezone "America/Denver" %}
-                        <td>{{ checkin.checkin_time }}</td>
-                        <td>{{ checkin.checkout_time }}</td>
-                    {% endtimezone %}
-                    <td>
-                    {% if checkin.checkin_time and checkin.checkout_time %}
-                      {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
-                    {% else %}
-                      none
-                    {% endif %}
-                  </td>
-                  <td>{{ checkin.class_field.subject }}</td>
-                  <td>{{ checkin.class_field.class_name }}</td>
-                </tr>
-                {% endfor %}
+                <tbody id="checkinTableBody">
+                  {% for checkin in data %}
+                    <tr>
+                      <td>{{ checkin.checkin_time }}</td>
+                      <td>{{ checkin.checkout_time }}</td>
+                      <td></td>
+                      <td>{{ checkin.class_field.subject }}</td>
+                      <td>{{ checkin.class_field.class_name }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
               </tbody>
             </table>
           </div>
@@ -248,31 +241,49 @@
     }
   });
 
+  //loads weekly view on signing in
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    selectedTimeframe = 'Weekly';
+    selectedDate = today;
+
+    fetch('/fetch_checkins/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        timeframe: selectedTimeframe,
+        selected_date: selectedDate
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      updateDailyChart(data.labels, data.data);
+      updatePieChart(data.classLabels || [], data.classCounts || []);
+      updateDurationChart(data.durationLabels || [], data.durationHours || []);
+      renderCheckinTable(data.checkins || []);
+    });
+  });
+
   // dropdown functionality
   let selectedDate = null;
-  document.querySelectorAll('.dropdown-item').forEach(item => {
+    document.querySelectorAll('.dropdown-item').forEach(item => {
     item.addEventListener('click', function (e) {
       e.preventDefault();
-      
+
       const timeframeAttr = this.getAttribute('data-timeframe');
       const dateText = this.textContent.trim();
 
-      let timeframe = null;
-
       if (timeframeAttr) {
-        timeframe = timeframeAttr;
-        selectedDate = new Date().toISOString().split('T')[0]; // 🚨 Today’s date if clicking timeframe
+        selectedTimeframe = timeframeAttr;
       } else {
-        timeframe = document.querySelector('h1').textContent.trim();
-        selectedDate = dateText;  // User picked a real date
+        selectedDate = dateText;
       }
 
-      console.log(`Selected timeframe: ${timeframe}, date: ${selectedDate}`);
 
-      if (!timeframe || !selectedDate) {
-        console.error('Missing timeframe or selected date');
-        return;
-      }
+      const dateToSend = selectedDate || new Date().toISOString().split('T')[0];
 
       fetch('/fetch_checkins/', {
         method: 'POST',
@@ -281,27 +292,24 @@
           'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-          timeframe: timeframe,
-          selected_date: selectedDate
+          timeframe: selectedTimeframe,
+          selected_date: dateToSend
         })
       })
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Server responded with an error');
-        }
+        if (!response.ok) throw new Error('Server responded with an error');
         return response.json();
       })
       .then(data => {
-        console.log(data);
         updateDailyChart(data.labels, data.data);
         updatePieChart(data.classLabels || [], data.classCounts || []);
         updateDurationChart(data.durationLabels || [], data.durationHours || []);
-
-        if (timeframe === 'Today') {
-          dailyChart.options.plugins.title.text = `Checkins by Hour for ${selectedDate}`;
-        } else {
-          dailyChart.options.plugins.title.text = `Checkins by Day`;
-        }
+        renderCheckinTable(data.checkins);
+        document.getElementById('viewLabel').textContent = `${selectedTimeframe} – ${dateToSend}`;
+        dailyChart.options.plugins.title.text =
+          selectedTimeframe === 'Today'
+            ? `Checkins by Hour for ${dateToSend}`
+            : `Checkins by Day`;
         dailyChart.update();
       })
       .catch(error => {
@@ -309,7 +317,6 @@
       });
     });
   });
-
 
   function updateDailyChart(labels, data){
     dailyChart.data.labels = labels;
@@ -320,8 +327,15 @@
   function calculateDuration(start, end) {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    const diff = (endDate - startDate) / (1000 * 60 * 60);
-    return diff.toFixed(2);
+    const diffMs = endDate - startDate;
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    const hourStr = hours === 1 ? '1 hour' : `${hours} hours`;
+    const minuteStr = minutes === 1 ? '1 minute' : `${minutes} minutes`;
+
+    return `${hourStr}, ${minuteStr}`;
   }
 
   function updatePieChart(labels, data) {
@@ -336,6 +350,28 @@
     monthChart.update();
   }
 
+  function renderCheckinTable(checkins) {
+    const tbody = document.getElementById('checkinTableBody');
+    tbody.innerHTML = '';  // Clear previous rows
+
+    checkins.forEach(entry => {
+      const tr = document.createElement('tr');
+
+      const checkinTime = formatDateTime(entry.checkin_time);
+      const checkoutTime = formatDateTime(entry.checkout_time);
+      const duration = calculateDuration(entry.checkin_time, entry.checkout_time);
+
+      tr.innerHTML = `
+        <td>${checkinTime}</td>
+        <td>${checkoutTime}</td>
+        <td>${duration}</td>
+        <td>${entry.class_subject}</td>
+        <td>${entry.class_name}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
   // CSRF token helper
   function getCookie(name) {
     let cookieValue = null;

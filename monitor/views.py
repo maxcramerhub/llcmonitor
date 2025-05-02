@@ -17,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import time
 from pytz import timezone
 import dateutil.parser
-
+from collections import Counter
 mountain_tz = timezone('America/Denver')
 # ------------------------------------------------------------------------
 # CSV Export
@@ -163,64 +163,60 @@ def submit_review(request):
 
 def visualize(request):
     if loginUser:
-        # get completed check-ins only
-        data = Checkin.objects.filter(checkout_time__isnull=False).all()
-        
-        # --- daily check-ins chart data ---
-        daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(weekday=ExtractWeekDay('checkin_time'))\
-            .values('weekday')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('weekday')
-        
-        # prepare weekday labels and initialize data array
-        weekdays = [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        daily_data = [0] * 7  # zero placeholder for each day
-        
-        # map database results to correct weekday position
+        # Raw checkins
+        checkins = Checkin.objects.filter(checkout_time__isnull=False)
+
+        # Daily chart
+        daily_checkins = checkins.annotate(
+            weekday=ExtractWeekDay('checkin_time')
+        ).values('weekday').annotate(count=Count('checkin_id')).order_by('weekday')
+
+        weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        daily_data = [0] * 7
         for entry in daily_checkins:
-            # convert django's 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
-            day_index = entry['weekday'] % 7 - 1
-            if day_index == -1:  # handle sunday
-                day_index = 6
-            daily_data[day_index] = entry['count']
-        
-        # --- top classes chart data ---
-        top_classes = Checkin.objects.filter(checkout_time__isnull=False)\
-            .values('class_field__class_name')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('-count')[:5]
-        
-        # prepare class names and counts for charts
-        class_names = [f"{c['class_field__class_name']}" for c in top_classes]
+            idx = entry['weekday'] % 7 - 1
+            if idx == -1:
+                idx = 6
+            daily_data[idx] = entry['count']
+
+        # Top classes
+        top_classes = checkins.values('class_field__class_name')\
+            .annotate(count=Count('checkin_id')).order_by('-count')[:5]
+        class_names = [c['class_field__class_name'] for c in top_classes]
         class_counts = [c['count'] for c in top_classes]
-        
-        # --- top students chart data ---
-        top_students = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(full_name=Concat('student__fname', Value(' '), 'student__lname', 
-                                    output_field=CharField()))\
-            .values('full_name', 'student')\
-            .annotate(count=Count('checkin_id'))\
-            .order_by('-count')[:5]
-        
-        # prepare student names and counts for charts
+
+        # Top students
+        top_students = checkins.annotate(
+            full_name=Concat('student__fname', Value(' '), 'student__lname', output_field=CharField())
+        ).values('full_name').annotate(count=Count('checkin_id')).order_by('-count')[:5]
         student_names = [s['full_name'] for s in top_students]
         student_counts = [s['count'] for s in top_students]
-        
-        # --- average duration chart data ---
-        avg_durations = Checkin.objects.filter(checkout_time__isnull=False)\
-            .annotate(date=TruncDate('checkin_time'),
-                        duration=F('checkout_time') - F('checkin_time'))\
-            .values('date')\
-            .annotate(avg_duration=Avg('duration'))\
-            .order_by('date')
-        
-        # prepare duration dates and hours for charts
-        duration_dates = [entry['date'].strftime('%Y-%m-%d') for entry in avg_durations]
-        duration_hours = [entry['avg_duration'].total_seconds() / 3600 for entry in avg_durations]
-        # build context with all chart data
+
+        # Duration and date extraction in Python (fixes 00:00 issue)
+        raw_durations = checkins.values(
+            'checkin_time', 'checkout_time'
+        )
+
+        date_buckets = {}
+        for entry in raw_durations:
+            checkin_time = entry['checkin_time'].astimezone(mountain_tz)
+            checkout_time = entry['checkout_time'].astimezone(mountain_tz)
+            date_key = checkin_time.date()
+
+            duration_hours = (checkout_time - checkin_time).total_seconds() / 3600
+            if date_key not in date_buckets:
+                date_buckets[date_key] = []
+            date_buckets[date_key].append(duration_hours)
+
+        # Sort and prepare results
+        duration_dates = []
+        duration_hours = []
+        for day in sorted(date_buckets.keys()):
+            duration_dates.append(day.strftime('%Y-%m-%d'))
+            duration_hours.append(sum(duration_buckets := date_buckets[day]) / len(duration_buckets))
+
         context = {
-            'data': data,
+            'data': checkins,
             'daily_data': json.dumps(daily_data),
             'weekdays': json.dumps(weekdays),
             'class_names': json.dumps(class_names),
@@ -230,12 +226,13 @@ def visualize(request):
             'duration_dates': json.dumps(duration_dates),
             'duration_hours': json.dumps(duration_hours),
             'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools'],
-            'datelist': list(duration_dates)
+            'datelist': duration_dates
         }
-        
+
         return render(request, 'monitor/visualize.html', context)
     else:
         return render(request, 'monitor/admin_login.html')
+
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
 #------------------------------------------------------------------------
@@ -629,12 +626,6 @@ def class_select(request):
 #------------------------------------------------------------------------
 @csrf_exempt
 def fetch_checkins(request):
-    import dateutil.parser
-
-...
-
-@csrf_exempt
-def fetch_checkins(request):
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
@@ -644,19 +635,17 @@ def fetch_checkins(request):
             if not timeframe:
                 return JsonResponse({'error': 'Missing timeframe'}, status=400)
 
+            # Parse and convert selected_date to a date object
             if not selected_date:
-                selected_date = timezone.now().date()
+                selected_date = timezone.now().astimezone(mountain_tz).date()
             else:
-                # 🌟 Safer parsing
-                if isinstance(selected_date, str):
-                    try:
-                        parsed_date = dateutil.parser.parse(selected_date)
-                        selected_date = parsed_date.date()
-                    except Exception:
-                        return JsonResponse({'error': 'Invalid selected_date format'}, status=400)
+                try:
+                    parsed_date = dateutil.parser.parse(selected_date)
+                    selected_date = parsed_date.date()
+                except Exception:
+                    return JsonResponse({'error': 'Invalid selected_date format'}, status=400)
 
-            checkins_query = Checkin.objects.filter(checkout_time__isnull=False)
-
+            # Determine time range
             if timeframe == 'Today':
                 start = datetime.combine(selected_date, time.min)
                 end = datetime.combine(selected_date, time.max)
@@ -666,37 +655,32 @@ def fetch_checkins(request):
                 elif timeframe == 'Monthly':
                     start_date = selected_date.replace(day=1)
                 else:
-                    if selected_date.month <= 6:
-                        start_date = selected_date.replace(month=1, day=1)
-                    else:
-                        start_date = selected_date.replace(month=7, day=1)
+                    start_date = selected_date.replace(month=1 if selected_date.month <= 6 else 7, day=1)
+
                 start = datetime.combine(start_date, time.min)
                 end = datetime.combine(selected_date, time.max)
             else:
                 return JsonResponse({'error': 'Invalid timeframe'}, status=400)
 
-            # Localize times
+            # Localize time range to America/Denver
             start = mountain_tz.localize(start)
             end = mountain_tz.localize(end)
 
-            checkins_query = checkins_query.filter(checkin_time__range=(start, end))
+            checkins_query = Checkin.objects.filter(
+                checkout_time__isnull=False,
+                checkin_time__range=(start, end)
+            )
 
+            # Daily (by hour, in MDT)
             if timeframe == 'Today':
-                breakdown = checkins_query.annotate(
-                    local_checkin_time=ExpressionWrapper(
-                        F('checkin_time') + timedelta(hours=-6),  # shift manually for MDT
-                        output_field=DateTimeField()
-                    )
-                ).annotate(
-                    hour=ExtractHour('local_checkin_time')
-                ).values('hour')\
-                .annotate(count=Count('checkin_id'))\
-                .order_by('hour')
+                hour_counter = Counter()
+                for c in checkins_query:
+                    if c.checkin_time:
+                        local_hour = c.checkin_time.astimezone(mountain_tz).hour
+                        hour_counter[local_hour] += 1
 
                 labels = [f"{h}:00" for h in range(24)]
-                data = [0] * 24
-                for entry in breakdown:
-                    data[entry['hour']] = entry['count']
+                data = [hour_counter.get(h, 0) for h in range(24)]
             else:
                 breakdown = checkins_query.annotate(date=TruncDate('checkin_time'))\
                     .values('date')\
@@ -713,15 +697,18 @@ def fetch_checkins(request):
 
                 label_index = {d: i for i, d in enumerate(labels)}
                 for entry in breakdown:
-                    idx = label_index[entry['date'].strftime('%Y-%m-%d')]
-                    data[idx] = entry['count']
+                    entry_date = entry.get('date')
+                    if entry_date:
+                        date_str = entry_date.strftime('%Y-%m-%d')
+                        if date_str in label_index:
+                            data[label_index[date_str]] = entry['count']
 
-            # Table entries
+            # Check-in details
             checkins_serialized = []
             for checkin in checkins_query.select_related('class_field'):
                 checkins_serialized.append({
-                    'checkin_time': checkin.checkin_time.isoformat() if checkin.checkin_time else '',
-                    'checkout_time': checkin.checkout_time.isoformat() if checkin.checkout_time else '',
+                    'checkin_time': checkin.checkin_time.astimezone(mountain_tz).isoformat() if checkin.checkin_time else '',
+                    'checkout_time': checkin.checkout_time.astimezone(mountain_tz).isoformat() if checkin.checkout_time else '',
                     'class_subject': checkin.class_field.subject if checkin.class_field else '',
                     'class_name': checkin.class_field.class_name if checkin.class_field else ''
                 })
@@ -733,17 +720,23 @@ def fetch_checkins(request):
             classLabels = [c['class_field__class_name'] for c in top_classes]
             classCounts = [c['count'] for c in top_classes]
 
-            # Average durations
-            avg_durations = checkins_query.annotate(duration=F('checkout_time') - F('checkin_time'))\
-                .annotate(date=TruncDate('checkin_time'))\
-                .values('date')\
-                .annotate(avg_duration=Avg('duration'))\
-                .order_by('date')
+            # Average Durations
+            avg_durations = checkins_query.annotate(
+                duration=F('checkout_time') - F('checkin_time'),
+                date=TruncDate('checkin_time')
+            ).values('date')\
+            .annotate(avg_duration=Avg('duration'))\
+            .order_by('date')
 
             durationLabels = []
             durationHours = []
             for entry in avg_durations:
-                durationLabels.append(entry['date'].strftime('%Y-%m-%d'))
+                date = entry['date']
+                if isinstance(date, datetime):
+                    date_local = date.astimezone(mountain_tz)
+                else:
+                    date_local = mountain_tz.localize(datetime.combine(date, time.min))
+                durationLabels.append(date_local.strftime('%Y-%m-%d'))
                 durationHours.append(entry['avg_duration'].total_seconds() / 3600)
 
             return JsonResponse({
@@ -759,9 +752,11 @@ def fetch_checkins(request):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': f'Internal server error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+
 
 #------------------------------------------------------------------------
 #'Secure' Admin Login
