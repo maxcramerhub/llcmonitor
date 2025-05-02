@@ -35,7 +35,14 @@
     <div class="card-body">
         <h3>Welcome {{ student_name }}!</h3>
         
-        <h4>Select what class you are here for!</h4>
+        {% if signed_in %}
+            <div class="alert alert-info">
+                <h4>Currently checked in for: {{ check_in.class_field.class_name }}</h4>
+            </div>
+        {% else %}
+            <h4>Select what class you are here for!</h4>
+        {% endif %}
+
         <form method="POST" action="{% url 'monitor:class_check' %}">
             {% csrf_token %}
             <ul class="nav nav-tabs" id="subjectTabs" role="tablist">

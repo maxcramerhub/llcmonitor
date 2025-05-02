@@ -1,126 +1,109 @@
-{% extends 'base.html' %}
+{% extends 'monitor/admin_base.html' %}
 
-{% block title %}Visualize Check Ins{% endblock %}
+{% block title %}Admin Dashboard{% endblock %}
 
-{% block content %}
-<!-- navigation bar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light p-4 shadow-lg mb-3">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">LLC Admin</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-      <div class="navbar-nav">
-        <a class="nav-link active" aria-current="page" href="#">Dashboard</a>
-        <a class="nav-link" href="#">Tutors</a>
-        <a class="nav-link" href="#">Admins</a>
-      </div>
-    </div>
-  </div>
-</nav>
-
+{% block admin_content %}
 <div class="container-fluid mt-4">
-  <!-- header with dropdown -->
-  <div class="row mb-4">
-    <div class="col d-flex justify-content-center align-items-center">
-      <h1 class="me-3" style="color:whitesmoke">Today</h1>
-      <div class="dropdown">
-        <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-          Change View
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
-          {% for option in tablist %}
-            <li><a class="dropdown-item" href="#" data-timeframe="{{ option }}">{{ option }}</a></li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="dropdown">
-        <button class="btn btn-light dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-          Change Date
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
-          {% for date in datelist %}
-            <li><a class="dropdown-item" href="#">{{ date }}</a></li>
-          {% endfor %}
-        </ul>
-      </div>
+    <!-- header with dropdown -->
+    <div class="row mb-4">
+        <div class="col d-flex justify-content-center align-items-center">
+            <h1 class="me-3" style="color:whitesmoke">Today</h1>
+            <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle m-3 p-3" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Change View
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
+                    {% for option in tablist %}
+                        <li><a class="dropdown-item" href="#" data-timeframe="{{ option }}">{{ option }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle p-3" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Change Date
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="timeframeDropdown">
+                    {% for date in datelist %}
+                        <li><a class="dropdown-item" href="#">{{ date }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <hr style="border-top: 8px solid #bbb; border-radius: 5px;" class="rounded">
+    <hr style="border-top: 8px solid #bbb; border-radius: 5px;" class="rounded">
 
-  <!-- main content container -->
-  <div id="contentContainer">
-    <!-- check-ins table section -->
-    <div class="row">
-      <div class="col mb-0">
-        <div class="shadow-lg mb-5" style="background-color: white; padding: 20px; border-radius: 20px;">
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead class="thead-dark">
-                <tr>
-                  <th>Check In Time</th>
-                  <th>Check Out Time</th>
-                  <th>Duration (hrs)</th>
-                  <th>Subject</th>
-                  <th>Class</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for checkin in data %}
-                <tr>
-                    {% load tz %}
-                    {% timezone "America/Denver" %}
-                        <td>{{ checkin.checkin_time }}</td>
-                        <td>{{ checkin.checkout_time }}</td>
-                    {% endtimezone %}
-                    <td>
-                    {% if checkin.checkin_time and checkin.checkout_time %}
-                      {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
-                    {% else %}
-                      none
-                    {% endif %}
-                  </td>
-                  <td>{{ checkin.class_field.subject }}</td>
-                  <td>{{ checkin.class_field.class_name }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <a href="export/" class="btn btn-primary">Export Check-Ins</a>
+    <!-- main content container -->
+    <div id="contentContainer">
+        <!-- check-ins table section -->
+        <div class="row">
+            <div class="col mb-0">
+                <div class="shadow-lg mb-5" style="background-color: white; padding: 20px; border-radius: 20px;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Check In Time</th>
+                                    <th>Check Out Time</th>
+                                    <th>Duration (mins)</th>
+                                    <th>Subject</th>
+                                    <th>Class</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for checkin in data %}
+                                <tr>
+                                    {% load tz %}
+                                    {% timezone "America/Denver" %}
+                                        <td>{{ checkin.checkin_time }}</td>
+                                        <td>{{ checkin.checkout_time }}</td>
+                                    {% endtimezone %}
+                                    <td>
+                                    {% if checkin.checkin_time and checkin.checkout_time %}
+                                        {{ checkin.checkout_time|timeuntil:checkin.checkin_time }}
+                                    {% else %}
+                                        none
+                                    {% endif %}
+                                    </td>
+                                    <td>{{ checkin.class_field.subject }}</td>
+                                    <td>{{ checkin.class_field.class_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="export/" class="btn btn-primary">Export Check-Ins</a>
+                </div>
+            </div>
         </div>
-      </div>
+
+
+        <!-- charts row -->
+        <div class="row">
+            <!-- left column for stacked charts -->
+            <div class="col-md-6 mb-3">
+                <!-- daily check-ins chart -->
+                <div class="shadow-lg mb-3" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
+                    <h3 class="text-center">Daily Check-ins</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+                
+                <!-- average duration chart -->
+                <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
+                    <h3 class="text-center">Average Duration</h3>
+                    <canvas id="chartMonthly"></canvas>
+                </div>
+            </div>
+
+            <!-- right column for top classes chart -->
+            <div class="col-md-6 mb-3">
+                <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px; height: 100%;">
+                    <h3 class="text-center">Top Classes by Attendance</h3>
+                    <canvas id="classChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-  
-    <!-- charts row -->
-    <div class="row">
-      <!-- daily check-ins chart -->
-      <div class="col-md-6 mb-3">
-        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
-          <h3 class="text-center">Daily Check-ins</h3>
-          <canvas id="dailyChart"></canvas>
-        </div>
-      </div>
-  
-      <!-- top classes chart -->
-      <div class="col-md-6 mb-3">
-        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
-          <h3 class="text-center">Top Classes by Attendance</h3>
-          <canvas id="classChart"></canvas>
-        </div>
-      </div>
-  
-      <!-- monthly chart -->
-      <div class="col-md-6 mb-3">
-        <div class="shadow-lg" style="background-color: whitesmoke; padding: 20px; border-radius: 20px;">
-          <h3 class="text-center">Average Duration</h3>
-          <canvas id="chartMonthly"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- chart.js library -->
@@ -256,25 +239,21 @@
       
       const timeframeAttr = this.getAttribute('data-timeframe');
       const dateText = this.textContent.trim();
+      const h1Element = document.querySelector('h1');
 
       let timeframe = null;
 
       if (timeframeAttr) {
         timeframe = timeframeAttr;
-        selectedDate = new Date().toISOString().split('T')[0]; // 🚨 Today’s date if clicking timeframe
+        selectedDate = new Date().toISOString().split('T')[0];
+        h1Element.textContent = timeframe;
       } else {
-        timeframe = document.querySelector('h1').textContent.trim();
-        selectedDate = dateText;  // User picked a real date
+        timeframe = h1Element.textContent.trim();
+        selectedDate = dateText;
+        h1Element.textContent = dateText;
       }
 
-      console.log(`Selected timeframe: ${timeframe}, date: ${selectedDate}`);
-
-      if (!timeframe || !selectedDate) {
-        console.error('Missing timeframe or selected date');
-        return;
-      }
-
-      fetch('/fetch_checkins/', {
+      fetch('/fetch-checkins/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -285,31 +264,60 @@
           selected_date: selectedDate
         })
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Server responded with an error');
-        }
-        return response.json();
-      })
+      .then(response => response.json())
       .then(data => {
-        console.log(data);
+        // Update daily chart
         updateDailyChart(data.labels, data.data);
-        updatePieChart(data.classLabels || [], data.classCounts || []);
-        updateDurationChart(data.durationLabels || [], data.durationHours || []);
-
         if (timeframe === 'Today') {
           dailyChart.options.plugins.title.text = `Checkins by Hour for ${selectedDate}`;
         } else {
           dailyChart.options.plugins.title.text = `Checkins by Day`;
         }
         dailyChart.update();
+
+        // Update pie chart
+        updatePieChart(data.classLabels, data.classCounts);
+
+        // Update duration chart
+        updateDurationChart(data.durationLabels, data.durationHours);
+
+        // Update table
+        const tbody = document.querySelector('table tbody');
+        tbody.innerHTML = '';
+        data.checkins.forEach(checkin => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${formatDateTime(checkin.checkin_time)}</td>
+            <td>${checkin.checkout_time ? formatDateTime(checkin.checkout_time) : 'none'}</td>
+            <td>${checkin.checkin_time && checkin.checkout_time ? 
+              Math.round((new Date(checkin.checkout_time) - new Date(checkin.checkin_time)) / (1000 * 60)) : 
+              'none'}</td>
+            <td>${checkin.class_subject}</td>
+            <td>${checkin.class_name}</td>
+          `;
+          tbody.appendChild(row);
+        });
       })
-      .catch(error => {
-        console.error('Fetch Error:', error);
-      });
+      .catch(error => console.error('Error:', error));
     });
   });
 
+  function updateTable(data) {
+    const tbody = document.querySelector('table tbody');
+    tbody.innerHTML = '';
+    
+    data.forEach(checkin => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${formatDateTime(checkin.checkin_time)}</td>
+        <td>${checkin.checkout_time ? formatDateTime(checkin.checkout_time) : 'none'}</td>
+        <td>${checkin.duration || 'none'}</td>
+        <td>${checkin.class_field.subject}</td>
+        <td>${checkin.class_field.class_name}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
 
   function updateDailyChart(labels, data){
     dailyChart.data.labels = labels;

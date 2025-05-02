@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if 'faculty_id' in request.session %}
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand text-primary" href="{% url 'monitor:visualize' %}">Admin Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'visualize' %}active text-primary fw-bold{% endif %}" 
+                           href="{% url 'monitor:visualize' %}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'tutor_management' %}active text-primary fw-bold{% endif %}" 
+                           href="{% url 'monitor:tutor_management' %}">Tutors</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_management' %}active text-primary fw-bold{% endif %}" 
+                           href="{% url 'monitor:admin_management' %}">Admins</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_reviews' %}active text-primary fw-bold{% endif %}" 
+                           href="{% url 'monitor:admin_reviews' %}">Reviews</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-3">Welcome, {{ request.session.faculty_name }}</span>
+                    <form method="post" action="{% url 'monitor:admin_logout' %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% block admin_content %}{% endblock %}
+{% else %}
+    <div class="alert alert-warning">
+        Please log in to access the admin interface.
+    </div>
+{% endif %}
+{% endblock %} 

@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import time
 from pytz import timezone
 import dateutil.parser
+from django.core.paginator import Paginator
 
 mountain_tz = timezone('America/Denver')
 # ------------------------------------------------------------------------
@@ -161,8 +162,13 @@ def submit_review(request):
     return render(request, 'success.html', {'form': form})
 
 
+# ------------------------------------------------------------------------
+# Visualize Data in Admin side
+# ------------------------------------------------------------------------    
+
+
 def visualize(request):
-    if loginUser:
+    if is_admin_logged_in(request):
         # get completed check-ins only
         data = Checkin.objects.filter(checkout_time__isnull=False).all()
         
@@ -229,13 +235,14 @@ def visualize(request):
             'student_counts': json.dumps(student_counts),
             'duration_dates': json.dumps(duration_dates),
             'duration_hours': json.dumps(duration_hours),
-            'tablist': ['Today', 'Weekly', 'Monthly', 'Semester', 'Tools'],
+            'tablist': ['Today', 'Weekly', 'Monthly', 'Semester'],
             'datelist': list(duration_dates)
         }
         
         return render(request, 'monitor/visualize.html', context)
     else:
         return render(request, 'monitor/admin_login.html')
+
 #------------------------------------------------------------------------
 #Enter StuID or Name Sign In Page
 #------------------------------------------------------------------------
@@ -364,8 +371,6 @@ def success(request):
 #------------------------------------------------------------------------
 
 def class_check(request):
-    # student_name = request.session.get('student_name')
-
     checkout_status = False 
 
     student_id = request.session.get('student_id')
@@ -383,7 +388,7 @@ def class_check(request):
         check_in = Checkin.objects.filter(
             student=student, 
             checkout_time__isnull=True
-        ).first()
+        ).select_related('class_field').first()  # Use select_related to get the class info
 
     if request.method == 'POST':
         course = request.POST.get('selected_course')
@@ -409,7 +414,6 @@ def class_check(request):
                 messages.info(request, 'Please come back to check out when you are done!')
                 return redirect('monitor:success')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
-            
                 print("Student signed in!")
                 return redirect('/class-check/')
         elif action == 'checkout':
@@ -429,7 +433,6 @@ def class_check(request):
 
                 return redirect(reverse('monitor:review_success') + '?checkout_status=True')
             except (Students.DoesNotExist, Class.DoesNotExist) as e:
-            
                 print("Student signed in!")
                 return redirect('/class-check/')
         elif action == 'switch':
@@ -457,22 +460,17 @@ def class_check(request):
             #take back to setup
                 return redirect('/class-select/')
 
-
     student = Students.objects.get(student_id=student_id)
-
     student_classes = student.classes.all()
-        # Now you have all the classes this student is associated with
+
     context = {
             'signed_in': signed_in,
             'student': student,
             'classes': student_classes,
             'student_name': request.session.get('student_name', ''),
-            'checkout_status':checkout_status
+            'checkout_status': checkout_status,
+            'check_in': check_in if signed_in else None
     }
-    # if not student_id:
-    #     return redirect('index')
-        
-
 
     return render(request, 'monitor/class_check.html', context)
 
@@ -528,14 +526,15 @@ def class_select(request):
         try:
             url = "https://apps.western.edu/cs/undergrad_search"
 
+            # Get current semester dynamically
+            current_semester = get_current_semester()
 
-            # need to introduce dynamism for filter value
             payload = json.dumps({
             "query": {
                 "filters": [
                 {
                     "field": "Standard_Term",
-                    "value": "Spring 2025 Semester",
+                    "value": current_semester,
                     "include": "True"
                 }
                 ],
@@ -573,16 +572,12 @@ def class_select(request):
 
             response = requests.request("POST", url, headers=headers, data=payload)
 
-            # print(response.text)
-
             courses = response.json()
 
         except requests.RequestException as e:
             return JsonResponse({
                 'error': str(e)
             }, status=500)
-
-        # Subjects of interest
 
         # Use a dictionary to track unique courses
         unique_courses = {}
@@ -600,14 +595,13 @@ def class_select(request):
 
         # Convert unique courses to a list
         llcs = list(unique_courses.values())
-        cache.set(cached_key, llcs, 86400)
+        cache.set(cached_key, llcs, 86400)  # Cache for 24 hours
     else:
         llcs = cached_data
 
     name = request.session.get('student_name')
     if name == None:
         name = "Student"
-
 
     array = []
     for student_class in student_classes:
@@ -771,21 +765,194 @@ def admin_login(request):
     if request.method == 'POST':
         requestUser = request.POST.get('username')
         requestPass = request.POST.get('password')
-        user = Faculty.objects.filter(username = requestUser).first()
-        global loginUser
-        if user.password == requestPass:
-            loginUser = user
-            print('login successful')
-            return redirect('/visualize/')
+        user = Faculty.objects.filter(username=requestUser).first()
+        
+        if user and user.password == requestPass:
+            # Store user info in session
+            request.session['faculty_id'] = user.faculty_id
+            request.session['faculty_name'] = f"{user.fname} {user.lname}"
+            request.session['faculty_username'] = user.username
+            messages.success(request, f'Welcome back, {user.fname}!')
+            return redirect('monitor:visualize')
         else:
-            #redirect back to login with error
-            print('Invalid login')
+            messages.error(request, 'Invalid username or password')
             return render(request, 'monitor/admin_login.html')
     
     return render(request, 'monitor/admin_login.html')
 
 def admin_logout(request):
     if request.method == 'POST':
-        global loginUser
-        loginUser = None
+        # Clear session data
+        request.session.flush()
+        messages.info(request, 'You have been logged out successfully')
+        return redirect('monitor:admin_login')
+    
+    return redirect('monitor:admin_login')
+
+# Helper function to check if user is logged in
+def is_admin_logged_in(request):
+    return 'faculty_id' in request.session
+
+
+#------------------------------------------------------------------------
+# Tutor Management / Admin Management 
+#------------------------------------------------------------------------    
+
+def tutor_management(request):
+    if not is_admin_logged_in(request):
         return render(request, 'monitor/admin_login.html')
+    
+    tutors = Tutor.objects.all()
+    return render(request, 'monitor/tutor_management.html', {'tutors': tutors})
+
+def add_tutor(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    if request.method == 'POST':
+        fname = request.POST.get('fname')
+        lname = request.POST.get('lname')
+        western_id = request.POST.get('western_id')
+        
+        tutor = Tutor.objects.create(
+            fname=fname,
+            lname=lname,
+            western_id=western_id
+        )
+        messages.success(request, f'Tutor {tutor.fname} {tutor.lname} added successfully!')
+        return redirect('monitor:tutor_management')
+    
+    return render(request, 'monitor/tutor_form.html', {'action': 'Add'})
+
+def edit_tutor(request, tutor_id):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    tutor = Tutor.objects.get(tutor_id=tutor_id)
+    
+    if request.method == 'POST':
+        tutor.fname = request.POST.get('fname')
+        tutor.lname = request.POST.get('lname')
+        tutor.western_id = request.POST.get('western_id')
+        tutor.save()
+        
+        messages.success(request, f'Tutor {tutor.fname} {tutor.lname} updated successfully!')
+        return redirect('monitor:tutor_management')
+    
+    return render(request, 'monitor/tutor_form.html', {'tutor': tutor, 'action': 'Edit'})
+
+def delete_tutor(request, tutor_id):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    tutor = Tutor.objects.get(tutor_id=tutor_id)
+    tutor_name = f"{tutor.fname} {tutor.lname}"
+    tutor.delete()
+    
+    messages.success(request, f'Tutor {tutor_name} deleted successfully!')
+    return redirect('monitor:tutor_management')
+
+def admin_management(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    admins = Faculty.objects.all()
+    return render(request, 'monitor/admin_management.html', {'admins': admins})
+
+def add_admin(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    if request.method == 'POST':
+        fname = request.POST.get('fname')
+        lname = request.POST.get('lname')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        # Check if username already exists
+        if Faculty.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists. Please choose a different username.')
+            return render(request, 'monitor/admin_form.html', {'action': 'Add'})
+        
+        admin = Faculty.objects.create(
+            fname=fname,
+            lname=lname,
+            username=username,
+            password=password
+        )
+        messages.success(request, f'Admin {admin.fname} {admin.lname} added successfully!')
+        return redirect('monitor:admin_management')
+    
+    return render(request, 'monitor/admin_form.html', {'action': 'Add'})
+
+def edit_admin(request, admin_id):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    admin = Faculty.objects.get(faculty_id=admin_id)
+    
+    if request.method == 'POST':
+        # Check if username is being changed and if it already exists
+        new_username = request.POST.get('username')
+        if new_username != admin.username and Faculty.objects.filter(username=new_username).exists():
+            messages.error(request, 'Username already exists. Please choose a different username.')
+            return render(request, 'monitor/admin_form.html', {'admin': admin, 'action': 'Edit'})
+        
+        admin.fname = request.POST.get('fname')
+        admin.lname = request.POST.get('lname')
+        admin.username = new_username
+        admin.password = request.POST.get('password')
+        admin.save()
+        
+        messages.success(request, f'Admin {admin.fname} {admin.lname} updated successfully!')
+        return redirect('monitor:admin_management')
+    
+    return render(request, 'monitor/admin_form.html', {'admin': admin, 'action': 'Edit'})
+
+def delete_admin(request, admin_id):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    # Prevent deleting the currently logged-in admin
+    if request.session.get('faculty_id') == admin_id:
+        messages.error(request, 'You cannot delete your own account while logged in.')
+        return redirect('monitor:admin_management')
+    
+    admin = Faculty.objects.get(faculty_id=admin_id)
+    admin_name = f"{admin.fname} {admin.lname}"
+    admin.delete()
+    
+    messages.success(request, f'Admin {admin_name} deleted successfully!')
+    return redirect('monitor:admin_management')
+
+
+#------------------------------------------------------------------------
+# Get Current Semester Helper Function and Admin Reviews
+#------------------------------------------------------------------------        
+
+def get_current_semester():
+    current_date = timezone.now()
+    month = current_date.month
+    year = current_date.year
+
+    #Get current date via timezone, then calc month and year, then auto determine semester for API call
+    
+    if 1 <= month <= 5:  # Spring semester
+        return f"Spring {year} Semester"
+    elif 6 <= month <= 8:  # Summer semester
+        return f"Summer {year} Semester"
+    else:  # Fall semester
+        return f"Fall {year} Semester"
+
+def admin_reviews(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+
+      #Reviews with pagination :)
+    
+    reviews_list = Reviews.objects.select_related('tutor').prefetch_related('tutor__classes').all().order_by('-tutorreviews__date_of_review')
+    paginator = Paginator(reviews_list, 10)
+    page = request.GET.get('page')
+    reviews = paginator.get_page(page)
+    
+    return render(request, 'monitor/admin_reviews.html', {'reviews': reviews})
