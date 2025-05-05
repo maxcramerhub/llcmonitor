@@ -23,7 +23,8 @@
     {% if request.GET.checkout_status %}
     <h2 class="text-white">Would you like to leave a review?</h2>
     <a href="{% url 'monitor:leave_review' %}" class="btn btn-success me-2">Yes</a>
-    <a href="{% url 'monitor:index' %}" class="btn btn-secondary">No</a>
+    <!-- <a href="{% url 'monitor:index' %}" class="btn btn-secondary">No</a> -->
+    <button onclick="launchConfettiAndRedirect()" class="btn btn-secondary">No</button>
     {% endif %}
 </div>
 
@@ -57,10 +58,26 @@
     }, 1000);
 </script>
 
+<script>
+    function launchConfettiAndRedirect() {
+        confetti({
+            particleCount: 300,
+            spread: 800,
+            origin: { y: 0.6 }
+        });
+
+        setTimeout(function() {
+            window.location.href = "{% url 'monitor:index' %}";
+        }, 1000); // Wait 1 second before redirecting
+    }
+</script>
+
+
+
 {% if confetti %}
     <script>
         // Launch the confetti effect if confetti is True
-        launchConfetti();
+        launchConfettiAndRedirect();
     </script>
 {% endif %}
 
