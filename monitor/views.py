@@ -552,14 +552,55 @@ def class_select(request):
             'Content-Type': 'application/json'
             }
 
-            response = requests.request("POST", url, headers=headers, data=payload)
+            # Add timeout to prevent hanging
+            response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
+            response.raise_for_status()  # Raise an exception for bad status codes
 
             courses = response.json()
 
-        except requests.RequestException as e:
-            return JsonResponse({
-                'error': str(e)
-            }, status=500)
+        except (requests.RequestException, requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            print(f"Error fetching courses from Western API: {str(e)}")
+            # Fallback to default course list when API is unavailable
+            courses = [
+                {
+                    "Subject": "Mathematics",
+                    "Course_Number": "101",
+                    "Course_Name": "College Algebra",
+                    "Name": "College Algebra"
+                },
+                {
+                    "Subject": "Mathematics", 
+                    "Course_Number": "111",
+                    "Course_Name": "Calculus I",
+                    "Name": "Calculus I"
+                },
+                {
+                    "Subject": "Physics",
+                    "Course_Number": "101", 
+                    "Course_Name": "General Physics I",
+                    "Name": "General Physics I"
+                },
+                {
+                    "Subject": "Computer Science",
+                    "Course_Number": "101",
+                    "Course_Name": "Introduction to Programming",
+                    "Name": "Introduction to Programming"
+                },
+                {
+                    "Subject": "Computer Science",
+                    "Course_Number": "201",
+                    "Course_Name": "Data Structures",
+                    "Name": "Data Structures"
+                },
+                {
+                    "Subject": "Engineering",
+                    "Course_Number": "101",
+                    "Course_Name": "Introduction to Engineering",
+                    "Name": "Introduction to Engineering"
+                }
+            ]
+            # Add a message to inform users about the fallback
+            messages.warning(request, "Course data from Western University is temporarily unavailable. Showing default courses.")
 
         # Use a dictionary to track unique courses
         unique_courses = {}
@@ -919,11 +960,11 @@ def get_current_semester():
 
     #Get current date via timezone, then calc month and year, then auto determine semester for API call
     
-    if 1 <= month <= 5:  # Spring semester
+    if 1 <= month <= 5:  # Spring semester (Jan-May)
         return f"Spring {year} Semester"
-    elif 6 <= month <= 8:  # Summer semester
+    elif month == 6 or month == 7:  # Summer semester (June-July)
         return f"Summer {year} Semester"
-    else:  # Fall semester
+    else:  # Fall semester (Aug-Dec)
         return f"Fall {year} Semester"
 
 def admin_reviews(request):
