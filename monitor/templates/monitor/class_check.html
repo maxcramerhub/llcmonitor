@@ -18,6 +18,32 @@
         filter: blur(4px);
     }
     
+    /* Custom styling for class selection buttons */
+    .class-selector {
+        border: 2px solid #6c757d;
+        background-color: white;
+        color: #495057;
+        transition: all 0.2s ease;
+    }
+    
+    .class-selector:hover {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: white !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+    }
+    
+    .btn-check:checked + .class-selector {
+        background-color: #8B0000 !important;
+        border-color: #8B0000 !important;
+        color: white !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+    }
+    
+    .btn-check:focus + .class-selector {
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
 
 </style>
 {% endblock %}
@@ -33,44 +59,57 @@
 
 <div class="card p-2 m-4 shadow-lg">
     <div class="card-body">
-        <h3>Welcome {{ student_name }}!</h3>
-        
-        {% if signed_in %}
-            <div class="alert alert-info">
-                <h4>Currently checked in for: {{ check_in.class_field.class_name }}</h4>
+        <div class="row align-items-center mb-3">
+            <div class="col-md-4 text-start">
+                <h3 class="mb-0">Welcome {{ student_name }}!</h3>
             </div>
-        {% else %}
-            <h4>Select what class you are here for!</h4>
-        {% endif %}
+            <div class="col-md-4 text-center">
+                {% if signed_in %}
+                    <h4 class="mb-0">
+                        <span class="badge bg-danger fs-5 py-2 px-3">Currently in: {{ check_in.class_field.class_name }}</span>
+                    </h4>
+                {% else %}
+                    <h4 class="mb-0">Select Your Class</h4>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <!-- Empty column for balance -->
+            </div>
+        </div>
 
         <form method="POST" action="{% url 'monitor:class_check' %}">
             {% csrf_token %}
-            <ul class="nav nav-tabs" id="subjectTabs" role="tablist">
+            <div class="row mb-4">
                 {% for class in classes %}
-                    <li class="nav-item">
-                        <input type="radio" name="selected_course" id="class_{{ class.class_id }}" 
-                            value="{{ class.class_id }}" 
-                            {% if forloop.first %}checked{% endif %} 
-                            class="btn-check">
-                        <label class="nav-link {% if forloop.first %}active{% endif %}"
-                            for="class_{{ class.class_id }}"
-                            id="{{ class.class_name|slugify }}-tab"
-                            data-bs-toggle="tab"
-                            data-bs-target="#{{ class.class_name|slugify }}"
-                            onclick="document.getElementById('class_{{ class.class_id }}').checked = true;">
-                            {{ class.class_name }}
-                        </label>
-                    </li>
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <input type="radio" name="selected_course" id="class_{{ class.class_id }}" 
+                        value="{{ class.class_id }}" 
+                        {% if forloop.first %}checked{% endif %} 
+                        class="btn-check">
+                    <label class="btn btn-outline-secondary w-100 py-4 px-3 text-start shadow-sm fs-5 fw-bold class-selector"
+                        for="class_{{ class.class_id }}"
+                        id="{{ class.class_name|slugify }}-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#{{ class.class_name|slugify }}">
+                        {{ class.class_name }}
+                    </label>
+                </div>
                 {% endfor %}
-            </ul>
+            </div>
 
-            {% if signed_in == False %}
-                <button type="submit" name="action" value="checkin" class="btn btn-primary me-2 mt-3 p-3 h3"><i class="fa-solid fa-circle-check"></i> Check In</button>
-            {% else %}
-                <button type="submit" name="action" value="checkout" class="btn btn-primary me-2 mt-3 p-3 h3" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open"></i> Check Out</button>
-                <button type="submit" name="action" value="switch" class="btn btn-warning me-2 mt-3 p-3 h3"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left"></i>Switch Class</button>
-            {% endif %}
-            <button type="submit" name="action" value="addclass" class="btn btn-success me-2 mt-3 p-3 h3"><i class="fa-solid fa-graduation-cap"></i> New Class</button>
+
+
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                {% if signed_in == False %}
+                    <button type="submit" name="action" value="checkin" class="btn btn-primary py-4 px-5 fs-2 shadow-lg"><i class="fa-solid fa-circle-check me-2"></i> Check In</button>
+                {% else %}
+                    <button type="submit" name="action" value="checkout" class="btn btn-primary py-4 px-5 fs-2 shadow-lg" {% if some_condition %}disabled{% endif %}><i class="fa-solid fa-door-open me-2"></i> Check Out</button>
+                    {% if classes|length > 1 %}
+                        <button type="submit" name="action" value="switch" class="btn btn-warning py-4 px-5 fs-2 shadow-lg"{% if some_condition %}disabled{% endif %}><i class="fa-solid fa-right-left me-2"></i>Switch Class</button>
+                    {% endif %}
+                {% endif %}
+                <button type="submit" name="action" value="addclass" class="btn btn-success py-4 px-5 fs-2 shadow-lg"><i class="fa-solid fa-graduation-cap me-2"></i> New Class</button>
+            </div>
         </form>
 
 {% endblock %}

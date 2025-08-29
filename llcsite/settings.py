@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-b)fo%sa=ftyf31wyiccnk%&q#k4o-=)m#31v_@zlk#^+@0^yzm"
+SECRET_KEY = "CHANGE-THIS-TO-A-SECURE-SECRET-KEY-IN-PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -132,3 +132,15 @@ STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Email Configuration for Western University (Office 365)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'  # Western uses Office 365
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-email@domain.com'
+EMAIL_HOST_PASSWORD = 'your-app-password-here'  # You'll need to generate an app password
+
+# Email settings for notifications
+ADMIN_EMAIL = 'admin@domain.com'  # Where to send error notifications
+FROM_EMAIL = 'noreply@domain.com'  # Should match EMAIL_HOST_USER

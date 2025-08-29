@@ -11,27 +11,27 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'visualize' %}active text-primary fw-bold{% endif %}" 
+                        <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'visualize' %}active text-primary fw-bold{% endif %}" 
                            href="{% url 'monitor:visualize' %}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'tutor_management' %}active text-primary fw-bold{% endif %}" 
+                        <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'tutor_management' %}active text-primary fw-bold{% endif %}" 
                            href="{% url 'monitor:tutor_management' %}">Tutors</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_management' %}active text-primary fw-bold{% endif %}" 
+                        <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'admin_management' %}active text-primary fw-bold{% endif %}" 
                            href="{% url 'monitor:admin_management' %}">Admins</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_reviews' %}active text-primary fw-bold{% endif %}" 
+                        <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'admin_reviews' %}active text-primary fw-bold{% endif %}" 
                            href="{% url 'monitor:admin_reviews' %}">Reviews</a>
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
-                    <span class="text-muted me-3">Welcome, {{ request.session.faculty_name }}</span>
+                    <span class="text-muted me-3 fs-6">Welcome, {{ request.session.faculty_name }}</span>
                     <form method="post" action="{% url 'monitor:admin_logout' %}" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-primary">Logout</button>
+                        <button type="submit" class="btn btn-outline-primary py-2 px-4 fs-6">Logout</button>
                     </form>
                 </div>
             </div>

@@ -88,6 +88,12 @@ class Reviews(models.Model):
     null=True, #make it so we can allow null value for tutor 
     blank=True)
     rating = models.IntegerField(null=True, blank=True)
+    class_reviewed = models.ForeignKey(Class, 
+    on_delete=models.CASCADE, 
+    related_name='reviews',
+    null=True, 
+    blank=True)
+    subject_reviewed = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         managed = True
@@ -122,3 +128,39 @@ class TutorSchedule(models.Model):
     class Meta:
         managed = True
         db_table = 'Tutor_Schedule'
+
+class EmailSettings(models.Model):
+    # Email server settings
+    email_host = models.CharField(max_length=100, default='smtp.office365.com')
+    email_port = models.IntegerField(default=587)
+    email_use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField(default='your-email@domain.com')
+    email_host_password = models.CharField(max_length=255, help_text='App password for 2FA accounts')
+    
+    # Notification settings
+    admin_email = models.EmailField(default='admin@domain.com')
+    from_email = models.EmailField(default='noreply@domain.com')
+    
+    # Feature toggles
+    enable_error_notifications = models.BooleanField(default=True)
+    enable_csv_email_exports = models.BooleanField(default=True)
+    enable_weekly_summaries = models.BooleanField(default=False)
+    
+    # Metadata
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        managed = True
+        db_table = 'EmailSettings'
+        verbose_name = 'Email Settings'
+        verbose_name_plural = 'Email Settings'
+
+    def __str__(self):
+        return f"Email Settings (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one settings record exists
+        if not self.pk and EmailSettings.objects.exists():
+            raise ValueError("Only one EmailSettings instance is allowed")
+        super().save(*args, **kwargs)
