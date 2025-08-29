@@ -26,10 +26,6 @@
                         <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'admin_reviews' %}active text-primary fw-bold{% endif %}" 
                            href="{% url 'monitor:admin_reviews' %}">Reviews</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link fs-5 py-3 px-4 {% if request.resolver_match.url_name == 'email_settings' %}active text-primary fw-bold{% endif %}" 
-                           href="{% url 'monitor:email_settings' %}">Email</a>
-                    </li>
                 </ul>
                 <div class="d-flex align-items-center">
                     <span class="text-muted me-3 fs-6">Welcome, {{ request.session.faculty_name }}</span>
