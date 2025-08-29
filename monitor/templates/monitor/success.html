@@ -6,26 +6,29 @@
 
 <!-- dynamic success page with interval -->
 <div class="container mt-5 text-center">
-    <div class="alert alert-info position-relative" style="z-index: 1;"> <!-- added position relative and z index for layout -->
-    {% for message in messages %}
-        {% if message.tags == 'success' %}
-            <h1 id="random"></h1>
-            <h1>{{ message }}</h1>
-        {% else %}
-            <h2>{{ message }}</h2>
-        {% endif %}
-    {% endfor %}
-    </div>  
-</div>
-
-
-<div class="container mt-4 position-relative" style="z-index: 2;">
-    {% if request.GET.checkout_status %}
-    <h2 class="text-white">Would you like to leave a review?</h2>
-    <a href="{% url 'monitor:leave_review' %}" class="btn btn-success me-2">Yes</a>
-    <!-- <a href="{% url 'monitor:index' %}" class="btn btn-secondary">No</a> -->
-    <button onclick="launchConfettiAndRedirect()" class="btn btn-secondary">No</button>
-    {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="alert alert-info position-relative py-5 px-5 shadow-lg" style="z-index: 1; border-radius: 20px; font-size: 1.5rem;">
+                {% for message in messages %}
+                    {% if message.tags == 'success' %}
+                        <div class="mb-4">
+                            <i id="random" style="font-size: 4rem;"></i>
+                        </div>
+                        <h1 class="display-4 mb-4">{{ message }}</h1>
+                        {% if request.GET.checkout_status %}
+                            <h2 class="display-6 mb-4">Would you like to leave a review?</h2>
+                            <div class="d-flex flex-wrap justify-content-center gap-4">
+                                <a href="{% url 'monitor:leave_review' %}" class="btn btn-success py-4 px-5 fs-1 shadow-lg" style="min-width: 150px;">Yes</a>
+                                <button onclick="launchConfettiAndRedirect()" class="btn btn-secondary py-4 px-5 fs-1 shadow-lg" style="min-width: 150px;">No</button>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <h2 class="display-5">{{ message }}</h2>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 </div>
 
 

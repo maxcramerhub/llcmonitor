@@ -72,7 +72,51 @@
                             </tbody>
                         </table>
                     </div>
-                    <a href="/export-checkins/" class="btn btn-primary">Export Check-Ins</a>
+                    
+                    <!-- Pagination -->
+                    {% if data.has_other_pages %}
+                    <nav aria-label="Check-ins pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if data.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ data.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in data.paginator.page_range %}
+                                {% if data.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > data.number|add:'-3' and num < data.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if data.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ data.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ data.paginator.num_pages }}">Last &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <a href="/export-checkins/" class="btn btn-primary">Download Export</a>
+                        <button type="button" class="btn btn-danger" onclick="exportAndClear()">
+                            Clear Check-in Data
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -101,6 +145,41 @@
                     <h3 class="text-center">Top Classes by Attendance</h3>
                     <canvas id="classChart"></canvas>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Clear Data Confirmation Modal -->
+<div class="modal fade" id="clearDataModal" tabindex="-1" aria-labelledby="clearDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearDataModalLabel">Confirm Data Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <strong>Backup Complete!</strong> Your data has been exported and downloaded.
+                </div>
+                <div class="alert alert-warning">
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete <strong>ALL</strong> check-in data? This will permanently remove:</p>
+                <ul>
+                    <li>All check-in and check-out records</li>
+                    <li>All historical data used for charts and reports</li>
+                </ul>
+                <p class="text-success"><strong>✓ A backup CSV file has been automatically downloaded to your computer.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'monitor:clear_checkins' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete All Data</button>
+                </form>
             </div>
         </div>
     </div>
@@ -371,6 +450,26 @@
     };
     const date = new Date(isoString);
     return date.toLocaleString('en-US', options);  // <-- Force 'en-US' explicitly!
+  }
+
+  // Function to export data and then show clear confirmation modal
+  function exportAndClear() {
+    // Create a temporary link to trigger the export download
+    const exportLink = document.createElement('a');
+    exportLink.href = '/export-checkins/';
+    exportLink.download = 'checkins_backup.csv';
+    exportLink.style.display = 'none';
+    
+    // Add to DOM, click, and remove
+    document.body.appendChild(exportLink);
+    exportLink.click();
+    document.body.removeChild(exportLink);
+    
+    // Small delay to ensure download starts, then show modal
+    setTimeout(() => {
+      const modal = new bootstrap.Modal(document.getElementById('clearDataModal'));
+      modal.show();
+    }, 500);
   }
 </script>
 {% endblock %}

@@ -30,16 +30,39 @@ from django.http import HttpResponse
 from django.utils import timezone
 
 def export_checkins(request):
-    # Create the HttpResponse object with CSV header
+    # Check if email export is requested
+    email_export = request.GET.get('email', False)
+    recipient_email = request.GET.get('recipient')
+    
+    # Get all check-ins
+    checkins = Checkin.objects.select_related('class_field').all()
+    
+    if email_export and recipient_email:
+        # Email the export
+        from .utils import send_csv_export_email
+        filename = f"checkins_export_{timezone.now().strftime('%Y%m%d_%H%M')}.csv"
+        
+        success = send_csv_export_email(
+            recipient_email=recipient_email,
+            data=checkins,
+            filename=filename,
+            data_type="Check-ins"
+        )
+        
+        if success:
+            messages.success(request, f'Check-ins export has been emailed to {recipient_email}!')
+        else:
+            messages.error(request, 'Failed to send export email. Please try again.')
+        
+        return redirect('monitor:visualize')
+    
+    # Regular download export
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="checkins.csv"'
 
     writer = csv.writer(response)
     writer.writerow(['Check In Time', 'Check Out Time', 'Duration (mins)', 'Subject', 'Class'])
 
-    # Get all check-ins
-    checkins = Checkin.objects.select_related('class_field').all()
-    
     # Get Mountain timezone
     mountain_tz = pytz.timezone('America/Denver')
 
@@ -63,6 +86,8 @@ def export_checkins(request):
 
     return response
 
+
+
 # ------------------------------------------------------------------------
 # Visualization better comments
 # ------------------------------------------------------------------------
@@ -83,17 +108,32 @@ def leave_review(request):
         form = ReviewForm(request.POST)
 
         if form.is_valid():
-
-            review = form.save()
+            review = form.save(commit=False)
+            
+            # Auto-populate class and subject from session (from checkout)
+            class_id = request.session.get('last_checkin_class_id')
+            if class_id:
+                try:
+                    class_obj = Class.objects.get(class_id=class_id)
+                    review.class_reviewed = class_obj
+                    review.subject_reviewed = class_obj.subject
+                except Class.DoesNotExist:
+                    pass
+            
+            review.save()
             print(f"Review saved: {review}")
 
-            tutor_review = TutorReviews.objects.create(
-                tutor= review.tutor,
-                review=review,
-                date_of_review=now()
-            )
+            # Only create TutorReview if a tutor was selected
+            if review.tutor:
+                tutor_review = TutorReviews.objects.create(
+                    tutor= review.tutor,
+                    review=review,
+                    date_of_review=now()
+                )
+                print(f"TutorReview saved: {tutor_review}")
+            else:
+                print("No tutor selected, skipping TutorReview creation")
 
-            print(f"TutorReview saved: {tutor_review}")
             print(f"Redirecting to: monitor:index")
             print(f"Form data: {form.cleaned_data}")
 
@@ -103,8 +143,10 @@ def leave_review(request):
             print(f"Tutor FK: {review.tutor}")
             print(f"Rating: {review.rating}")
 
-
-
+            # Clear the session data after using it
+            request.session.pop('last_checkin_class_id', None)
+            request.session.pop('last_checkin_class_name', None)
+            request.session.pop('last_checkin_subject', None)
 
             return redirect('monitor:thank_you')  # or to a 'thank you' page
         
@@ -115,7 +157,17 @@ def leave_review(request):
     else:
         form = ReviewForm()
 
-    return render(request, 'monitor/review_form.html', {'form': form})
+    # Get class info from session to display to user
+    class_name = request.session.get('last_checkin_class_name', 'Unknown Class')
+    subject = request.session.get('last_checkin_subject', 'Unknown Subject')
+    
+    context = {
+        'form': form,
+        'class_name': class_name,
+        'subject': subject
+    }
+
+    return render(request, 'monitor/review_form.html', context)
 
 
 def submit_review(request):
@@ -151,8 +203,11 @@ def submit_review(request):
 
 def visualize(request):
     if is_admin_logged_in(request):
-        # get completed check-ins only
-        data = Checkin.objects.filter(checkout_time__isnull=False).all()
+        # get completed check-ins only with pagination
+        checkins_list = Checkin.objects.filter(checkout_time__isnull=False).select_related('class_field', 'student').order_by('-checkin_time')
+        paginator = Paginator(checkins_list, 15)  # Show 15 check-ins per page
+        page = request.GET.get('page')
+        data = paginator.get_page(page)
         
         # --- daily check-ins chart data ---
         daily_checkins = Checkin.objects.filter(checkout_time__isnull=False)\
@@ -408,8 +463,12 @@ def class_check(request):
                 checkin.checkout_time = timezone.now()
                 checkin.save()
 
+                # Store the checked-out class info in session for review form
+                request.session['last_checkin_class_id'] = checkin.class_field.class_id
+                request.session['last_checkin_class_name'] = checkin.class_field.class_name
+                request.session['last_checkin_subject'] = checkin.class_field.subject
+
                 messages.success(request, f'Thanks for checking out of {checkin.class_field.class_name}, {request.session.get("student_name")}!')
-                messages.info(request, 'Leave a review of your experience?')
 
                 checkout_status = True #adding flag so that we can only display leave a review on checkout page
 
@@ -805,12 +864,17 @@ def admin_login(request):
 
 def admin_logout(request):
     if request.method == 'POST':
+        # Clear any existing messages before logout
+        storage = messages.get_messages(request)
+        for message in storage:
+            pass  # This consumes/clears the messages
+        
         # Clear session data
         request.session.flush()
-        messages.info(request, 'You have been logged out successfully')
-        return redirect('monitor:admin_login')
+        # Don't add logout message since it would show on student login page
+        return redirect('monitor:index')
     
-    return redirect('monitor:admin_login')
+    return redirect('monitor:index')
 
 # Helper function to check if user is logged in
 def is_admin_logged_in(request):
@@ -971,11 +1035,102 @@ def admin_reviews(request):
     if not is_admin_logged_in(request):
         return render(request, 'monitor/admin_login.html')
 
-      #Reviews with pagination :)
+    # Get sorting parameter from URL
+    sort_by = request.GET.get('sort', 'default')
     
-    reviews_list = Reviews.objects.select_related('tutor').prefetch_related('tutor__classes').all().order_by('-tutorreviews__date_of_review')
+    # Base queryset
+    reviews_list = Reviews.objects.select_related('tutor', 'class_reviewed').prefetch_related('tutor__classes').all()
+    
+    # Apply sorting based on parameter
+    if sort_by == 'subject':
+        reviews_list = reviews_list.order_by('subject_reviewed')
+    elif sort_by == 'class':
+        reviews_list = reviews_list.order_by('class_reviewed__class_name')
+    elif sort_by == 'rating':
+        reviews_list = reviews_list.order_by('-rating')
+    elif sort_by == 'tutor':
+        reviews_list = reviews_list.order_by('tutor__fname', 'tutor__lname')
+    else:  # default sorting
+        reviews_list = reviews_list.order_by('-tutorreviews__date_of_review')
+    
     paginator = Paginator(reviews_list, 10)
     page = request.GET.get('page')
     reviews = paginator.get_page(page)
     
-    return render(request, 'monitor/admin_reviews.html', {'reviews': reviews})
+    # Get unique subjects and classes for filter options
+    subjects = Reviews.objects.exclude(subject_reviewed__isnull=True).exclude(subject_reviewed='').values_list('subject_reviewed', flat=True).distinct().order_by('subject_reviewed')
+    classes = Reviews.objects.exclude(class_reviewed__isnull=True).select_related('class_reviewed').values_list('class_reviewed__class_name', flat=True).distinct().order_by('class_reviewed__class_name')
+    
+    context = {
+        'reviews': reviews,
+        'current_sort': sort_by,
+        'subjects': subjects,
+        'classes': classes,
+    }
+    
+    return render(request, 'monitor/admin_reviews.html', context)
+
+def email_settings(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    # Email settings are under construction - disable all POST functionality
+    if request.method == 'POST':
+        messages.warning(request, 'Email settings are currently under construction. Please check back later.')
+        return redirect('monitor:email_settings')
+    
+    # Simply render the under construction page
+    return render(request, 'monitor/email_settings.html')
+
+def clear_checkin_data(request):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    if request.method == 'POST':
+        try:
+            # Delete all check-in records
+            deleted_count = Checkin.objects.all().count()
+            Checkin.objects.all().delete()
+            
+            messages.success(request, f'Successfully cleared {deleted_count} check-in records!')
+            return redirect('monitor:visualize')
+        except Exception as e:
+            # Send error notification to admin
+            from .utils import send_error_notification
+            send_error_notification(
+                error_type="Check-in Data Clearing Failed",
+                error_message=str(e),
+                request=request
+            )
+            messages.error(request, f'Error clearing check-in data: {str(e)}')
+            return redirect('monitor:visualize')
+    
+    # If GET request, redirect back to visualize
+    return redirect('monitor:visualize')
+
+def delete_review(request, review_id):
+    if not is_admin_logged_in(request):
+        return render(request, 'monitor/admin_login.html')
+    
+    if request.method == 'POST':
+        try:
+            # Get the review
+            review = Reviews.objects.get(review_id=review_id)
+            
+            # Delete associated TutorReviews first
+            TutorReviews.objects.filter(review=review).delete()
+            
+            # Delete the review
+            review.delete()
+            
+            messages.success(request, f'Review #{review_id} deleted successfully!')
+            return redirect('monitor:admin_reviews')
+        except Reviews.DoesNotExist:
+            messages.error(request, f'Review #{review_id} not found.')
+            return redirect('monitor:admin_reviews')
+        except Exception as e:
+            messages.error(request, f'Error deleting review: {str(e)}')
+            return redirect('monitor:admin_reviews')
+    
+    # If GET request, redirect back to admin_reviews
+    return redirect('monitor:admin_reviews')

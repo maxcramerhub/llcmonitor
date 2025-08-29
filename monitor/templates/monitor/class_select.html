@@ -35,16 +35,24 @@
  <!-- Welcome area -->
 <div class="card p-2 m-4 shadow-lg">
     <div class="card-body">
-        <h3>Hello {{ student_name }}!</h3>
-        
-        <h4>Add Your Classes</h4>
+        <div class="row align-items-center mb-3">
+            <div class="col-md-4 text-start">
+                <h3 class="mb-0">Hello {{ student_name }}!</h3>
+            </div>
+            <div class="col-md-4 text-center">
+                <h4 class="mb-0">Add Your Classes</h4>
+            </div>
+            <div class="col-md-4">
+                <!-- Empty column for balance -->
+            </div>
+        </div>
         <form method="POST" action="{% url 'monitor:class_select' %}">
           {% csrf_token %}
-          <ul class="nav nav-tabs" id="subjectTabs" role="tablist">
+          <ul class="nav nav-tabs mb-4" id="subjectTabs" role="tablist">
             <!-- tabs based on subjects in views.py -->
               {% for subject in subjects %}
               <li class="nav-item">
-                  <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                  <button class="nav-link {% if forloop.first %}active{% endif %} fs-4 py-3 px-4 fw-bold" 
                           id="{{ subject|slugify }}-tab" 
                           data-bs-toggle="tab" 
                           data-bs-target="#{{ subject|slugify }}" 
@@ -80,15 +88,15 @@
                               autocomplete="off"               
                               >
                               <!-- need to value check between slugified Title and course number with classes.  if so leave as checked.-->
-                        <label class="btn btn-outline-danger w-100 p-4 text-start shadow-sm" for="{{ subject|slugify }}-{{ course.Course_Number }}"">
+                        <label class="btn btn-outline-danger w-100 py-4 px-3 text-start shadow-sm fs-5" for="{{ subject|slugify }}-{{ course.Course_Number }}"">
                           {{ course.Title }} ({{ course.Course_Number }})
                         </label>
                       </div>
                       {% endif %}
                     {% endfor %}
                   </div>
-                  <button type="submit" class="btn btn-primary mt-3 p-3 h3 shadow">
-                    <i class="fa-solid fa-circle-check"></i> Finish Setup
+                  <button type="submit" class="btn btn-primary mt-4 py-4 px-5 fs-2 w-100 shadow-lg">
+                    <i class="fa-solid fa-circle-check me-2"></i> Finish Setup
                   </button>
               </div>
               {% endfor %}

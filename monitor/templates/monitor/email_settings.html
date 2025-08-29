@@ -1,0 +1,86 @@
+{% extends 'monitor/admin_base.html' %}
+
+{% block title %}Email Settings - Under Construction{% endblock %}
+
+{% block admin_content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 style="color: white;">Email Configuration</h1>
+    </div>
+
+    <!-- Under Construction Message -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-construction"></i> Under Construction
+                    </h5>
+                </div>
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-hard-hat fa-5x text-warning mb-3"></i>
+                    </div>
+                    
+                    <h3 class="text-warning mb-3">Email Settings Currently Under Development</h3>
+                    
+                    <p class="lead text-muted mb-4">
+                        We're working hard to bring you email configuration features. This section is temporarily unavailable while we implement the following features:
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 offset-md-3">
+                            <ul class="list-group list-group-flush text-start">
+                                <li class="list-group-item d-flex align-items-center">
+                                    <i class="fas fa-envelope text-primary me-2"></i>
+                                    Email Export Functionality
+                                </li>
+                                <li class="list-group-item d-flex align-items-center">
+                                    <i class="fas fa-server text-primary me-2"></i>
+                                    SMTP Configuration
+                                </li>
+                                <li class="list-group-item d-flex align-items-center">
+                                    <i class="fas fa-bell text-primary me-2"></i>
+                                    Notification Settings
+                                </li>
+                                <li class="list-group-item d-flex align-items-center">
+                                    <i class="fas fa-chart-line text-primary me-2"></i>
+                                    Weekly Summary Reports
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Expected completion: Coming Soon
+                        </p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'monitor:visualize' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Optional: Contact Information -->
+    <div class="row justify-content-center mt-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-question-circle me-1"></i>
+                        Need immediate assistance? Contact your system administrator.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
