@@ -102,6 +102,13 @@
               {% endfor %}
             </div>
           </form>
+
+<!-- Sticky Cancel Button -->
+<div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1000;">
+    <a href="{% url 'monitor:index' %}" class="btn btn-danger py-4 px-5 fs-2 shadow-lg" style="border-radius: 50px;">
+        <i class="fas fa-times me-2"></i>Cancel Sign-in
+    </a>
+</div>
 {% endblock %}
 
 {% block extra_js %}

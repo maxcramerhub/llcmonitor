@@ -26,6 +26,13 @@
                         <h2 class="display-5">{{ message }}</h2>
                     {% endif %}
                 {% endfor %}
+                
+                <!-- Continue button to skip timeout -->
+                <div class="mt-4">
+                    <button onclick="skipTimeout()" class="btn btn-primary py-4 px-5 fs-1 shadow-lg" style="min-width: 200px;">
+                        <i class="fas fa-arrow-right me-2"></i>Continue
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -50,8 +57,9 @@
 
 
     let timeLeft = 6;
+    let countdown;
     
-    const countdown = setInterval(function() {
+    countdown = setInterval(function() {
         timeLeft--;
         
         if (timeLeft <= 0) {
@@ -59,6 +67,11 @@
             window.location.href = "{% url 'monitor:index' %}";
         }
     }, 1000);
+    
+    function skipTimeout() {
+        clearInterval(countdown);
+        window.location.href = "{% url 'monitor:index' %}";
+    }
 </script>
 
 <script>
