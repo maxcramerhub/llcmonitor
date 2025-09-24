@@ -32,9 +32,27 @@ echo.
 
 REM Start the development server
 echo Starting Django server on http://127.0.0.1:8000/
+echo Opening Chrome in fullscreen after server starts...
 echo Press Ctrl+C to stop the server
 echo.
-py manage.py runserver
+
+REM Start Django server in background
+start /b py manage.py runserver
+
+REM Wait a moment for server to start
+timeout /t 4 /nobreak >nul
+
+REM Open Chrome in fullscreen mode
+echo Opening Chrome in fullscreen...
+start chrome --start-fullscreen http://localhost:8000
+
+REM Keep the console window open and show server output
+echo.
+echo Chrome should now be open in fullscreen mode.
+echo The Django server is running in the background.
+echo Press Ctrl+C in this window to stop the server.
+echo.
+pause
 
 REM Keep the window open if there's an error
 if errorlevel 1 (
