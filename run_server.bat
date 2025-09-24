@@ -9,7 +9,7 @@ REM Quick backup before running (optional)
 REM call backup_project.bat
 
 REM Check if Python is available
-python --version >nul 2>&1
+py --version >nul 2>&1
 if errorlevel 1 (
     echo Error: Python is not installed or not in PATH
     echo Please install Python and try again.
@@ -25,15 +25,16 @@ if not exist "manage.py" (
     exit /b 1
 )
 
-REM Run Django migrations (optional - uncomment if needed)
-REM echo Running migrations...
-REM python manage.py migrate
+REM Run Django migrations
+echo Running migrations...
+py manage.py migrate
+echo.
 
 REM Start the development server
 echo Starting Django server on http://127.0.0.1:8000/
 echo Press Ctrl+C to stop the server
 echo.
-python manage.py runserver
+py manage.py runserver
 
 REM Keep the window open if there's an error
 if errorlevel 1 (
