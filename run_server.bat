@@ -28,6 +28,10 @@ if not exist "manage.py" (
 REM Run Django migrations
 echo Running migrations...
 py manage.py migrate
+
+REM Create cache table
+echo Creating cache table...
+py manage.py createcachetable
 echo.
 
 REM Start the development server
@@ -44,7 +48,7 @@ timeout /t 4 /nobreak >nul
 
 REM Open Chrome in fullscreen mode
 echo Opening Chrome in fullscreen...
-start chrome --start-fullscreen http://localhost:8000
+start "" "chrome.exe" --kiosk http://localhost:8000
 
 REM Keep the console window open and show server output
 echo.
